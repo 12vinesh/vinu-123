@@ -25,6 +25,11 @@
         {{ section.settings.heading }}
       </h2>
     {%- endif -%}
+    {%- if section.settings.heading != blank -%}
+      <p class="collage-wrapper-description>
+        {{ section.settings.description }}
+      </p>
+    {%- endif -%}
     <div class="collage{% if section.settings.mobile_layout == 'collage' %} collage--mobile{% endif %}">
       {% assign skip_card_product_styles = false %}
       {%- for block in section.blocks -%}
@@ -257,6 +262,12 @@
       ],
       "default": "h1",
       "label": "t:sections.all.heading_size.label"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "description",
+      "default": "Add description",
+      "label": "Description"
     },
     {
       "type": "header",
