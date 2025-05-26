@@ -296,6 +296,28 @@
         document.documentElement.classList.add('shopify-design-mode');
       }
     </script>
+
+    <script>
+(function () {
+  const paramsToStore = [
+    'utm_source', 'utm_medium', 'utm_campaign',
+    'mtm_source', 'mtm_medium', 'mtm_campaign',
+    'mtm_cid', 'mtm_kwd', 'mtm_content',
+    'google_shopify_campaign_id',
+    'tw_source', 'tw_adid', 'tw_campaign'
+  ];
+
+  const urlParams = new URLSearchParams(window.location.search);
+
+  paramsToStore.forEach((param) => {
+    const value = urlParams.get(param);
+    if (value) {
+      localStorage.setItem(param, value);
+      document.cookie = `${param}=${value}; path=/; max-age=604800`; // also store as cookie (7 days)
+    }
+  });
+})();
+</script>
   </head>
 
   <body class="gradient{% if settings.animations_hover_elements != 'none' %} animate--hover-{{ settings.animations_hover_elements }}{% endif %}">
