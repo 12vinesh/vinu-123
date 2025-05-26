@@ -309,16 +309,13 @@
     if (value) localStorage.setItem(`tracking_${param}`, value);
   });
 
-  try {
-    if (typeof _paq !== 'undefined') {
-      const visitorId = _paq.find(p => p[0] === 'getVisitorId')?.[1];
-      if (visitorId) {
-        localStorage.setItem('tracking_matomo_id', visitorId);
-      }
-    }
-  } catch (e) {
-    console.warn('Matomo visitorId fetch error', e);
-  }
+  window._paq = window._paq || [];
+_paq.push([function () {
+  var visitorId = this.getVisitorId();
+  localStorage.setItem('tracking_matomo_id', visitorId); // ✅ Save it
+  console.log('Matomo ID set:', visitorId);
+}]);
+
 })();
       console.log("params", params);
       console.log("urlParams", urlParams);
