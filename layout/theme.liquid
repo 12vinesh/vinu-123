@@ -296,6 +296,29 @@
         document.documentElement.classList.add('shopify-design-mode');
       }
     </script>
+    (function saveTrackingParams() {
+  const params = [
+    'mtm_source', 'mtm_medium', 'mtm_campaign', 'mtm_cid', 'mtm_kwd', 'mtm_content',
+    'utm_source', 'google_shopify_campaign_id', 'tw_source', 'tw_adid', 'tw_campaign'
+  ];
+  const urlParams = new URLSearchParams(window.location.search);
+  params.forEach(param => {
+    const value = urlParams.get(param);
+    if (value) localStorage.setItem(`tracking_${param}`, value);
+  });
+
+  try {
+    if (typeof _paq !== 'undefined') {
+      const visitorId = _paq.find(p => p[0] === 'getVisitorId')?.[1];
+      if (visitorId) {
+        localStorage.setItem('tracking_matomo_id', visitorId);
+      }
+    }
+  } catch (e) {
+    console.warn('Matomo visitorId fetch error', e);
+  }
+})();
+
   </head>
 
   <body class="gradient{% if settings.animations_hover_elements != 'none' %} animate--hover-{{ settings.animations_hover_elements }}{% endif %}">
