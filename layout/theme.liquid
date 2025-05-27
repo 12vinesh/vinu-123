@@ -296,30 +296,6 @@
         document.documentElement.classList.add('shopify-design-mode');
       }
     </script>
-
-    <script>
-      (function saveTrackingParams() {
-  const params = [
-    'mtm_source', 'mtm_medium', 'mtm_campaign', 'mtm_cid', 'mtm_kwd', 'mtm_content',
-    'utm_source', 'google_shopify_campaign_id', 'tw_source', 'tw_adid', 'tw_campaign'
-  ];
-  const urlParams = new URLSearchParams(window.location.search);
-  params.forEach(param => {
-    const value = urlParams.get(param);
-    if (value) localStorage.setItem(`tracking_${param}`, value);
-  });
-
-  window._paq = window._paq || [];
-_paq.push([function () {
-  var visitorId = this.getVisitorId();
-  localStorage.setItem('tracking_matomo_id', visitorId); // ✅ Save it
-  console.log('Matomo ID set:', visitorId);
-}]);
-
-})();
-      console.log("params", params);
-      console.log("urlParams", urlParams);
-    </script>
   </head>
 
   <body class="gradient{% if settings.animations_hover_elements != 'none' %} animate--hover-{{ settings.animations_hover_elements }}{% endif %}">
