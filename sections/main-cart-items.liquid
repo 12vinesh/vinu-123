@@ -460,7 +460,7 @@
   const matomoId = (typeof _paq !== 'undefined') 
     ? _paq.find(p => p[0] === 'getVisitorId')?.[1] 
     : '';
- 
+ console.log("matomoId",matomoId);
   // Collect tracking data
   const trackingData = {
     matomo_id: matomoId,
