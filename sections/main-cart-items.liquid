@@ -450,6 +450,49 @@
     </form>
   </div>
 </cart-items>
+<script>
+  function getParam(name) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(name) || '';
+  }
+ 
+  // Get Matomo ID if available
+  const matomoId = (typeof _paq !== 'undefined') 
+    ? _paq.find(p => p[0] === 'getVisitorId')?.[1] 
+    : '';
+ 
+  // Collect tracking data
+  const trackingData = {
+    matomo_id: matomoId,
+    mtm_source: getParam('mtm_source'),
+    mtm_medium: getParam('mtm_medium'),
+    mtm_campaign: getParam('mtm_campaign'),
+    mtm_cid: getParam('mtm_cid'),
+    mtm_kwd: getParam('mtm_kwd'),
+    mtm_content: getParam('mtm_content'),
+    utm_source: getParam('utm_source'),
+    google_shopify_campaign_id: getParam('google_shopify_campaign_id'),
+    tw_source: getParam('tw_source'),
+    tw_adid: getParam('tw_adid'),
+    tw_campaign: getParam('tw_campaign'),
+  };
+ 
+  document.addEventListener('DOMContentLoaded', function() {
+    // Find the cart form
+    const cartForm = document.querySelector('form[action="/cart"]');
+    if (cartForm) {
+      Object.entries(trackingData).forEach(([key, value]) => {
+        if (value) {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = `attributes[${key}]`;
+          input.value = value;
+          cartForm.appendChild(input);
+        }
+      });
+    }
+  });
+</script>
 
 {% schema %}
 {
