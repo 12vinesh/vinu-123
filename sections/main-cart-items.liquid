@@ -480,6 +480,7 @@
   document.addEventListener('DOMContentLoaded', function() {
     // Find the cart form
     const cartForm = document.querySelector('form[action="/cart"]');
+     console.log("cartForm",cartForm);
     if (cartForm) {
       Object.entries(trackingData).forEach(([key, value]) => {
         if (value) {
