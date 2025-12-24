@@ -777,7 +777,7 @@ function za() {
             } else
                 (A = (r - (s.slidesPerView - 1) * v) / s.slidesPerView),
                     s.roundLengths && (A = Math.floor(A)),
-                    d[M] && (d[M].style[t.getDirectionLabel("width")] = "100%");
+                    d[M] && (d[M].style[t.getDirectionLabel("width")] = `${A}px`);
             d[M] && (d[M].swiperSlideSize = A),
                 u.push(A),
                 s.centeredSlides
