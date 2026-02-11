@@ -1,5 +1,66 @@
-<div class="built-in-set">
-    <div>1</div>
-    <div>2</div>
-    <div>3</div>
+<div class="splide my-slider">
+  <div class="splide__track">
+    <ul class="splide__list">
+      <li class="splide__slide">Slide 1</li>
+      <li class="splide__slide">Slide 2</li>
+      <li class="splide__slide">Slide 3</li>
+      <li class="splide__slide">Slide 4</li>
+      <li class="splide__slide">Slide 5</li>
+    </ul>
+  </div>
 </div>
+
+<style>
+    .my-slider {
+  padding: 40px 0;
+}
+
+.splide__slide {
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 60px 20px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+/* Optional arrow style */
+.splide__arrow {
+  background: #000;
+  opacity: 0.7;
+}
+
+.splide__arrow svg {
+  fill: #fff;
+}
+
+/* Optional dots */
+.splide__pagination__page.is-active {
+  background: #000;
+}
+
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  new Splide('.my-slider', {
+    type      : 'loop',
+    perPage   : 3,
+    perMove   : 1,
+    gap       : '20px',
+    autoplay  : true,
+    interval  : 3000,
+    pauseOnHover: true,
+    arrows    : true,
+    pagination: true,
+
+    breakpoints: {
+      1024: {
+        perPage: 2,
+      },
+      768: {
+        perPage: 1,
+      }
+    }
+  }).mount();
+});
+</script>
