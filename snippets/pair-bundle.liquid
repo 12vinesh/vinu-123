@@ -545,12 +545,6 @@
    * ---------------------------------------------------------- */
   checkInventory();
   updatePropertiesInForm();
-  if (productForm) {
-    productForm.addEventListener("submit", function () {
-      const properties = collectLineItemProperties();
-      addLineItemPropertiesToForm(productForm, properties);
-    });
-  }
 });
 
 </script>
