@@ -420,7 +420,7 @@
       input.name = `properties[${key.replace(/:/g, "")}]`;
       input.value = value;
       form.appendChild(input);
-      console.log("input", input);
+      console.log("input", form);
     });
     } else if (Object.keys(properties).length == 0) {
       form.querySelectorAll('input[name^="properties["]').forEach((input) => input.remove());
