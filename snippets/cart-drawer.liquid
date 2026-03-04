@@ -170,9 +170,11 @@
              {%- for property in item.properties -%}
                 {%- assign prop_key_lower = property.first | downcase -%}
                      {%- unless prop_key_lower contains 'variant id' -%}
+                        {%- unless prop_key_lower contains 'bundlepair' -%}
                            {%- if prop_key_lower contains 'pair' -%}
                            {%- assign pair_count = pair_count | plus: 1 -%}
                            {%- endif -%}
+                            {%- endunless -%}
                            {%- endunless -%}
               {%- endfor -%}
 
