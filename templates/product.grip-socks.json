@@ -34,6 +34,10 @@
             "swatch_shape": "circle"
           }
         },
+        "bundle_g38aCr": {
+          "type": "bundle",
+          "settings": {}
+        },
         "quantity_selector": {
           "type": "quantity_selector",
           "settings": {}
@@ -61,6 +65,7 @@
         "title",
         "price",
         "variant_picker",
+        "bundle_g38aCr",
         "quantity_selector",
         "buy_buttons",
         "description",
