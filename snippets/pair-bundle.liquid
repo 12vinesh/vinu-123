@@ -544,6 +544,33 @@
    * ---------------------------------------------------------- */
   checkInventory();
   updatePropertiesInForm();
+  document.addEventListener(
+  "submit",
+  function (e) {
+    const form = e.target.closest('form[action*="/cart/add"]');
+    if (!form) return;
+
+    if (typeof collectLineItemProperties !== "function") return;
+
+    const properties = collectLineItemProperties();
+    if (!properties || Object.keys(properties).length === 0) return;
+
+    // Remove existing properties
+    form.querySelectorAll('input[name^="properties["]').forEach(el => el.remove());
+
+    // Inject new properties BEFORE Dawn reads FormData
+    Object.entries(properties).forEach(([key, value]) => {
+      if (!value) return;
+
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = `properties[${key}]`;
+      input.value = value;
+      form.appendChild(input);
+    });
+  },
+  true // 🔥 VERY IMPORTANT (capture phase)
+);
 });
 
 </script>
