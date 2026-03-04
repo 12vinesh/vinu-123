@@ -421,7 +421,6 @@
       input.value = value;
       form.appendChild(input);
     });
-    console.log("form", productForm);
     } else if (Object.keys(properties).length == 0) {
       form.querySelectorAll('input[name^="properties["]').forEach((input) => input.remove());
     }
@@ -432,6 +431,8 @@
     if (!productForm) return;
     const properties = collectLineItemProperties();
       addLineItemPropertiesToForm(productForm, properties);
+      
+    console.log("form", productForm);
   }
 
   window.updatePropertiesInForm = updatePropertiesInForm;
