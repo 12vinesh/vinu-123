@@ -230,7 +230,7 @@
           {% assign sizetext = selected_size.title %}
         {% assign mainsize = sizetext | split: " / " | first %}
       {{ mainsize }}
-       {% unless template contains 'pair-socks' or 'football-grip-socks' %}
+       {% unless template contains 'grip-socks' %}
         <i class="fa fa-check fa-check-size" aria-hidden="true"></i>
       {% endunless %}
        </div>
@@ -371,7 +371,7 @@
     const properties = {};
 
     let wrapperPairs;
-    {% if template.suffix contains "pair-socks" or "football-grip-socks" %}
+    {% if template.suffix contains "grip-socks" %}
       wrapperPairs = document.querySelectorAll(".dynamic-content.active-content .wrapper_pair");
     {% else %}
       wrapperPairs = document.querySelectorAll(".wrapper_pair");
