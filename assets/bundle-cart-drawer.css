@@ -66,3 +66,12 @@
   font-size: 13px;
   color: #202223;
 }
+
+/* Hide error icon when there's no error message */
+.cart-item__error {
+  display: none !important;
+}
+
+.cart-item__error:has(.cart-item__error-text:not(:empty)) {
+  display: flex !important;
+}
