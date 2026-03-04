@@ -275,7 +275,9 @@
     document.querySelectorAll("form").forEach((form) => {
       if (form.querySelector('[name="add"]') || form.querySelector(".product-form__submit")) {
         productForm = form;
-      }
+      }  
+    console.log("form", form);
+    console.log("product form", productForm);
     });
   }
 
@@ -431,8 +433,6 @@
     if (!productForm) return;
     const properties = collectLineItemProperties();
       addLineItemPropertiesToForm(productForm, properties);
-      
-    console.log("form", productForm);
   }
 
   window.updatePropertiesInForm = updatePropertiesInForm;
