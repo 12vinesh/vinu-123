@@ -181,7 +181,8 @@
             <ul class="bundle-pairs__list list-unstyled" data-bundle-pairs-list>
               {%- for property in item.properties -%}
                 {%- assign prop_key_lower = property.first | downcase -%}
-                {%- if prop_key_lower contains 'pair' and prop_key_lower contains 'variant id' == false -%}
+                 {%- unless prop_key_lower contains 'variant id' -%}
+                {%- if prop_key_lower contains 'pair' -%}
                   {%- assign variant_id_key = property.first | append: ' Variant ID' -%}
                   {%- assign variant_id = '' -%}
                   {%- for prop2 in item.properties -%}
@@ -200,6 +201,7 @@
                     </div>
                   </li>
                 {%- endif -%}
+              {%- endunless -%}
               {%- endfor -%}
             </ul>
           </div>
