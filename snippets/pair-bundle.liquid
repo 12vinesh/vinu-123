@@ -367,40 +367,58 @@
   /** ----------------------------------------------------------
    * SECTION 5: Line Item Property Collection
    * ---------------------------------------------------------- */
-  function collectLineItemProperties() {
-    const properties = {};
+ function collectLineItemProperties() {
+  const properties = {};
+  const variantIds = [];
+  const pairLabels = [];
 
-    let wrapperPairs;
-      wrapperPairs = document.querySelectorAll(".wrapper_pair");
-    wrapperPairs.forEach((variantBlock, index) => {
-      const titleLabel = variantBlock.querySelector(".title_label");
-      const colorGroup = variantBlock.querySelector(".selected_color");
-      const sizeGroup = variantBlock.querySelector(".selected_size");
+  const wrapperPairs = document.querySelectorAll(".wrapper_pair");
 
-      const pairTitle = titleLabel ? titleLabel.textContent.trim() : `Pair ${index + 1}`;
-      const selectedColorValue = colorGroup.querySelector(".selected-value");
-      const selectedColorPlace = colorGroup.querySelector(".selected-value .selected-value-place");
+  wrapperPairs.forEach((variantBlock, index) => {
+    const titleLabel = variantBlock.querySelector(".title_label");
+    const colorGroup = variantBlock.querySelector(".selected_color");
+    const sizeGroup = variantBlock.querySelector(".selected_size");
 
-      let selectedColor = "";
-      let variantId = "";
-      if (selectedColorValue) {
-        const colorTitle = selectedColorValue.querySelector(".color_title");
-        selectedColor = colorTitle?.textContent.trim() || selectedColorValue.getAttribute("color-property") || "";
-        variantId = selectedColorValue.getAttribute("data-variant-id") || "";
+    const pairTitle = titleLabel ? titleLabel.textContent.trim() : `Pair ${index + 1}`;
+    const selectedColorValue = colorGroup.querySelector(".selected-value");
+
+    let selectedColor = "";
+    let variantId = "";
+
+    if (selectedColorValue) {
+      const colorTitle = selectedColorValue.querySelector(".color_title");
+      selectedColor = colorTitle?.textContent.trim() || selectedColorValue.getAttribute("color-property") || "";
+      variantId = selectedColorValue.getAttribute("data-variant-id") || "";
+    }
+
+    const selectedSizeEl = sizeGroup.querySelector(".selected-value");
+    const selectedSize = selectedSizeEl ? selectedSizeEl.textContent.trim().replace(/\s+/g, " ") : "";
+
+    if (selectedColor && selectedSize) {
+      const cleanTitle = pairTitle.replace(":", "").trim();
+
+      // Visible property — shows in checkout
+      properties[cleanTitle] = `${selectedColor} (${selectedSize})`;
+
+      // Hidden property — underscore hides from checkout display
+      if (variantId) {
+        properties[`_${cleanTitle} Variant ID`] = variantId;
       }
 
-      const selectedSizeEl = sizeGroup.querySelector(".selected-value");
-      const selectedSize = selectedSizeEl ? selectedSizeEl.textContent.trim().replace(/\s+/g, " ") : "";
+      // Collect for Cart Transform single attribute
+      variantIds.push(variantId);
+      pairLabels.push(cleanTitle);
+    }
+  }); // ← closing forEach
 
-     if (selectedColor && selectedSize) {
-  const cleanTitle = pairTitle.replace(":", "").trim();
-  properties[cleanTitle] = `${selectedColor} (${selectedSize})`;
-  if (variantId) {
-    properties[`_${cleanTitle} Variant ID`] = variantId; // hidden from checkout
+  // Add single combined attribute for Cart Transform
+  if (variantIds.length > 0) {
+    properties['_bundlePairIds'] = variantIds.join(',');
+    properties['_bundlePairLabels'] = pairLabels.join(',');
   }
+
+  return properties;
 }
-    return properties;
-  }
 
   window.collectLineItemProperties = collectLineItemProperties;
 
