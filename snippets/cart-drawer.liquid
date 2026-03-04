@@ -286,8 +286,7 @@
               >
               <button class="quantity__button no-js-hidden" name="plus" type="button">
                 <span class="visually-hidden">{{- 'products.product.quantity.increase' | t: product: item.product.title | escape -}}</span>
-                {% render 'icon-plus' %}
-              </button>
+<span class="svg-wrapper">{{- 'icon-plus.svg' | inline_asset_content -}}</span>              </button>
             </quantity-input>
           {%- endunless -%}
 
