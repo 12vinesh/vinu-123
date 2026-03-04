@@ -188,8 +188,7 @@
     {%- unless prop_key_lower contains 'variant id' -%}
       {%- unless prop_key_lower contains 'bundlepair' -%}
         {%- if prop_key_lower contains 'pair' -%}
-          {%- assign variant_id_key = property.first | append: ' Variant ID' -%}
-          {%- assign variant_id = '' -%}
+         {%- assign variant_id_key = '_' | append: property.first | append: ' Variant ID' -%}
           {%- for prop2 in item.properties -%}
             {%- if prop2.first == variant_id_key -%}
               {%- assign variant_id = prop2.last -%}
