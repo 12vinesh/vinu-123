@@ -118,14 +118,6 @@
 
                   <tbody role="rowgroup">
                     {%- for item in cart.items -%}
-                      {% for p in item.properties %}
-  {% unless p.last == blank %}
-    <div class="product-option">
-      <dt>{{ p.first }}:</dt>
-      <dd>{{ p.last }}</dd>
-    </div>
-  {% endunless %}
-{% endfor %}
                       <tr id="CartDrawer-Item-{{ item.index | plus: 1 }}" class="cart-item" role="row">
                         <td class="cart-item__media" role="cell" headers="CartDrawer-ColumnProductImage">
                           {% if item.image %}
