@@ -392,14 +392,13 @@
       const selectedSizeEl = sizeGroup.querySelector(".selected-value");
       const selectedSize = selectedSizeEl ? selectedSizeEl.textContent.trim().replace(/\s+/g, " ") : "";
 
-      if (selectedColor && selectedSize) {
-        const cleanTitle = pairTitle.replace(":", "").trim();
-        properties[cleanTitle] = `${selectedColor} (${selectedSize})`;
-        if (variantId) {
-          properties[`${cleanTitle} Variant ID`] = variantId;
-        }
-      }
-    });
+     if (selectedColor && selectedSize) {
+  const cleanTitle = pairTitle.replace(":", "").trim();
+  properties[cleanTitle] = `${selectedColor} (${selectedSize})`;
+  if (variantId) {
+    properties[`_${cleanTitle} Variant ID`] = variantId; // hidden from checkout
+  }
+}
     return properties;
   }
 
