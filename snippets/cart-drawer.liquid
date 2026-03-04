@@ -182,32 +182,34 @@
             <button type="button" class="bundle-pairs__toggle" data-bundle-toggle aria-expanded="true">
               Hide {{ pair_count }} items ▲
             </button>
-            <ul class="bundle-pairs__list list-unstyled" data-bundle-pairs-list>
-              {%- for property in item.properties -%}
-                {%- assign prop_key_lower = property.first | downcase -%}
-                 {%- unless prop_key_lower contains 'variant id' -%}
-                {%- if prop_key_lower contains 'pair' -%}
-                  {%- assign variant_id_key = property.first | append: ' Variant ID' -%}
-                  {%- assign variant_id = '' -%}
-                  {%- for prop2 in item.properties -%}
-                    {%- if prop2.first == variant_id_key -%}
-                      {%- assign variant_id = prop2.last -%}
-                      {%- break -%}
-                    {%- endif -%}
-                  {%- endfor -%}
-                  <li class="bundle-pair-item" data-variant-id="{{ variant_id }}">
-                    <div class="bundle-pair-item__inner">
-                      <div class="bundle-pair-item__img-wrap" data-pair-img-wrap></div>
-                      <div class="bundle-pair-item__info">
-                        <span class="bundle-pair-item__label">{{ property.first }}:</span>
-                        <span class="bundle-pair-item__value">{{ property.last }}</span>
-                      </div>
-                    </div>
-                  </li>
-                {%- endif -%}
-              {%- endunless -%}
-              {%- endfor -%}
-            </ul>
+           <ul class="bundle-pairs__list list-unstyled" data-bundle-pairs-list>
+  {%- for property in item.properties -%}
+    {%- assign prop_key_lower = property.first | downcase -%}
+    {%- unless prop_key_lower contains 'variant id' -%}
+      {%- unless prop_key_lower contains 'bundlepair' -%}
+        {%- if prop_key_lower contains 'pair' -%}
+          {%- assign variant_id_key = property.first | append: ' Variant ID' -%}
+          {%- assign variant_id = '' -%}
+          {%- for prop2 in item.properties -%}
+            {%- if prop2.first == variant_id_key -%}
+              {%- assign variant_id = prop2.last -%}
+              {%- break -%}
+            {%- endif -%}
+          {%- endfor -%}
+          <li class="bundle-pair-item" data-variant-id="{{ variant_id }}">
+            <div class="bundle-pair-item__inner">
+              <div class="bundle-pair-item__img-wrap" data-pair-img-wrap></div>
+              <div class="bundle-pair-item__info">
+                <span class="bundle-pair-item__label">{{ property.first }}:</span>
+                <span class="bundle-pair-item__value">{{ property.last }}</span>
+              </div>
+            </div>
+          </li>
+        {%- endif -%}
+      {%- endunless -%}
+    {%- endunless -%}
+  {%- endfor -%}
+</ul>
           </div>
 
         {%- else -%}
