@@ -168,10 +168,11 @@
         {%- if is_bundle -%}
           {%- assign pair_count = 0 -%}
           {%- for property in item.properties -%}
-            {%- assign prop_key_lower = property.first | downcase -%}
-            {%- if prop_key_lower contains 'pair' and prop_key_lower contains 'variant id' == false -%}
-              {%- assign pair_count = pair_count | plus: 1 -%}
-            {%- endif -%}
+           {%- unless prop_key_lower contains 'variant id' -%}
+  {%- if prop_key_lower contains 'pair' -%}
+    {%- assign pair_count = pair_count | plus: 1 -%}
+  {%- endif -%}
+{%- endunless -%}
           {%- endfor -%}
 
           <div class="bundle-pairs">
