@@ -1,0 +1,554 @@
+<style>
+  .wrapper_bundle{
+     margin: 12px auto;
+  }
+  .title_label{
+   font-weight: 600; 
+  }
+  .title_pair{
+    padding: 12px 15px;
+    background: #f0f0f0;
+     cursor: pointer;
+      position: relative;
+  }
+  .wrapper_pair{
+        border: 1px solid #ddd;
+    margin-bottom: 20px;
+    border-radius: 8px;
+  }
+  .swatch-names{
+        font-weight: 600;
+        padding: 12px 15px;
+    padding-bottom: 5px;
+    text-transform: uppercase;
+    font-size: 14px;
+  }
+ .selected-value-place{
+   width: 35px;
+   height: 35px;
+    border-radius: 50%;
+       z-index: 1;
+   box-shadow: 0 1px 5px rgba(0, 0, 0, 0.5);
+ } 
+  .variant-info-display{
+    margin-left: 6px;
+  }
+  .selected_color, .selected_size{
+       padding: 12px 15px;
+        display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+      padding-top: 5px;
+  }
+
+ .selected-value .image_featured{
+    border-radius: 50%;
+  }
+  .color_title{
+    font-size: 1px;
+    position: absolute;
+    top: 50%;
+    right: 50%;
+    transform: translate(50%, -50%);
+  }
+  .color_value #selected-value-place{
+    display: flex;
+    align-items: center;
+     position: relative;
+  }
+  .color_value{
+     cursor: pointer;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+  }
+  .size_value{
+        border: 2px solid #ccc;
+    border-radius: 20px;
+    padding: 4px 34px;
+    cursor: pointer;
+    position: relative;
+    padding-right: 18px;
+    margin-right: 10px;
+  }
+ .selected_size .selected-value{
+    border: 2px solid #000!important;
+    font-weight: bold!important;
+  }
+.selected-value .fa.fa-check-color{
+  position: absolute;
+    top: 50%;
+    right: 50%;
+    transform: translate(50%, -50%);
+    background: #fff;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    line-height: 20px;
+    font-size: 16px;
+    text-align: center;
+   z-index: 9;
+}
+.selected_color .color_value:not(.selected-value) .fa.fa-check-color, .selected_size .size_value:not(.selected-value) .fa.fa-check-size{
+  display: none;
+} 
+.selected-value .fa-check-size{
+  display: block;
+    position: absolute;
+    top: 8px;
+    left: 5px;
+    background: #000;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    line-height: 20px;
+    font-size: 16px;
+    text-align: center;
+    color: #fff;
+}  
+ .accordion_content {
+  display: none;
+}
+
+.accordion_content.open {
+  display: block;
+}
+  .accordion-icon{
+    position: absolute;
+    right: 4px;
+    top: 17px;
+  }
+  .accordion-icon svg{
+    transform: rotate(0deg);
+  }
+  .accordion-icon.accordion-active svg{
+     transform: rotate(180deg);
+  }
+  .outStock {
+  position: relative;
+  display: inline-block;
+  pointer-events: none;
+     /* opacity: 0.5; */
+}
+
+.outStock::after{
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 2px;
+  width: 100%;
+ background: darkgray;
+ transform: rotate(49deg);
+  z-index: 2;
+}
+  .outStock::before{
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 2px;
+  width: 100%;
+ background: darkgray;
+ transform: rotate(-48deg);
+  z-index: 2;
+}
+
+/* New styles for filtered colors */
+.color_value.hidden {
+  display: none !important;
+}
+
+.color_value.filtered-out {
+  opacity: 0.3;
+  pointer-events: none;
+}
+.selected-value img{
+  border: 1px solid black;
+}
+  @media only screen and (max-width: 600px){
+   .selected_color{
+    gap: 22px;
+  } 
+  }
+  
+</style>
+{% assign product_variant_bundle = product.metafields.custom.product_variants %}
+{% if product_variant_bundle != blank %}
+<div class="wrapper_bundle ">
+  {% for metaobject in product.metafields.custom.product_variants.value %}
+    <div class="wrapper_pair">
+
+    
+      <div class="title_pair">
+     <span class="title_label">{{ metaobject.pair_title }}:</span>
+      <span class="variant-info-display"></span>
+        <span class="accordion-icon accordion-active">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevron-down">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+          </span>
+      </div>
+      
+ <div class="accordion_content open">
+
+   {% comment %} color swatch {% endcomment %}
+       <div class="swatch-names">COLOUR: <span class="swatch-color"></span> </div>
+      
+      <div class="selected_color">
+      {% for selected_color in metaobject.selected_color.value %}
+        {% assign inventoryQty = selected_color.inventory_quantity %}
+          {% assign colorCode = selected_color.featured_image.alt %}
+          {% assign Colortext = selected_color.title | split: " / " | last  %}
+        {% assign maincolor = Colortext | split: " / " | last %}
+        <div class="{% if forloop.first %} selected-value {% endif %} color_value {% if inventoryQty <= 0 %} outStock {% endif %}" data-variant-id={{ selected_color.id }} color-property="{{ selected_color.title | split: " / " | last }}" available-color="{{ selected_color.title | split: ' ' | first }}">
+            <span style="{% if Colortext == 'All White' %}
+            background: linear-gradient(135deg, #f0f0f0  0%, #f0f0f0  50%, #ffffff 50%, #ffffff 100%);
+          {% else %}
+            background-color: {{ colorCode }};
+          {% endif %}" id="selected-value-place" class="selected-value-place" data-value="{{ product.id }}" inventory-qty="{{ inventoryQty }}">
+             <i class="fa fa-check fa-check-color" aria-hidden="true"></i>
+              <span class="color_title" style="{% if Colortext == 'All White' %}
+            color: transparent;
+          {% else %}
+            color: {{ colorCode }};
+          {% endif %}">{{ maincolor }}</span>
+            
+          <img class="image_featured" src="{{ selected_color.featured_image | img_url: 'master' }}" style="display: none;">
+              
+            </span>
+            </div>
+        {% endfor %}
+      </div>
+    {% comment %} end color swatch {% endcomment %}
+
+ {% comment %} size swatch {% endcomment %}
+      {% comment %} <div class="swatch-names">Size: <span class="swatch-size"></span> </div> {% endcomment %}
+       <div class="selected_size">
+    {% for selected_size in metaobject.selected_size.value %}
+       {% assign inventorySizeQty = selected_size.inventory_quantity %}
+       <div class="{% if forloop.first %} selected-value {% endif %} size_value" inventory-qty-size="{{ inventorySizeQty }}"  available-size="{{ selected_size.title  | split: ' ' | first }}">
+          {% assign sizetext = selected_size.title %}
+        {% assign mainsize = sizetext | split: " / " | first %}
+      {{ mainsize }}
+       {% unless template contains 'pair-socks' or 'football-grip-socks' %}
+        <i class="fa fa-check fa-check-size" aria-hidden="true"></i>
+      {% endunless %}
+       </div>
+        {% endfor %}
+       </div>
+    {% comment %}end  size swatch {% endcomment %}
+</div>
+      
+    </div>
+      {% endfor %}
+      </div>
+{% endif %}
+    
+{% if product.metafields.custom.product_variants != blank  %} 
+<script>
+
+  document.addEventListener("DOMContentLoaded", function () {
+  /** ----------------------------------------------------------
+   * SECTION 1: Accordion Toggle for Pair Titles
+   * ---------------------------------------------------------- */
+  const titlePairs = document.querySelectorAll(".title_pair");
+
+  titlePairs.forEach((title) => {
+    title.addEventListener("click", () => {
+      const accordionIcon = title.children[2];
+      accordionIcon.classList.toggle("accordion-active");
+
+      const content = title.nextElementSibling;
+      if (content && content.classList.contains("accordion_content")) {
+        content.classList.toggle("open");
+      }
+    });
+  });
+
+  /** ----------------------------------------------------------
+   * SECTION 2: Product Form Detection
+   * ---------------------------------------------------------- */
+  let productForm = document.querySelector('form[action*="/cart/add"]');
+
+  // Fallback: Try to find product form by common patterns
+  if (!productForm) {
+    document.querySelectorAll("form").forEach((form) => {
+      if (form.querySelector('[name="add"]') || form.querySelector(".product-form__submit")) {
+        productForm = form;
+      }
+    });
+  }
+
+  const addToCartButton = document.querySelector(".product-form__submit");
+
+  /** ----------------------------------------------------------
+   * SECTION 3: Inventory Handling
+   * ---------------------------------------------------------- */
+  function checkInventory() {
+    let availableItems = 0;
+    let totalItems = 0;
+
+    document.querySelectorAll(".wrapper_pair").forEach((variantBlock) => {
+      const colorGroup = variantBlock.querySelector(".selected_color");
+      const sizeGroup = variantBlock.querySelector(".selected_size");
+
+      const colorEl = colorGroup.querySelector(".selected-value .selected-value-place");
+      const sizeEl = sizeGroup.querySelector(".selected-value");
+
+      const colorQty = colorEl ? parseInt(colorEl.getAttribute("inventory-qty")) || 0 : 0;
+      const sizeQty = sizeEl ? parseInt(sizeEl.getAttribute("inventory-qty-size")) || 0 : 0;
+
+      totalItems++;
+      if (colorQty > 0 && sizeQty > 0) availableItems++;
+    });
+
+    if (addToCartButton) {
+      const isAvailable = availableItems > 0;
+      addToCartButton.disabled = !isAvailable;
+      addToCartButton.style.opacity = isAvailable ? "1" : "0.5";
+      addToCartButton.style.cursor = isAvailable ? "pointer" : "not-allowed";
+    }
+  }
+
+  /** ----------------------------------------------------------
+   * SECTION 4: Dynamic Color & Size Filtering Logic
+   * ---------------------------------------------------------- */
+
+  // Filter colors when a size is selected
+  function filterColorsBySelectedSize(variantBlock) {
+    const sizeGroup = variantBlock.querySelector(".selected_size");
+    const colorGroup = variantBlock.querySelector(".selected_color");
+
+    const selectedSizeEl = sizeGroup.querySelector(".selected-value");
+    const selectedSizeValue = selectedSizeEl ? selectedSizeEl.getAttribute("available-size") : null;
+
+    const colorOptions = colorGroup.querySelectorAll(".color_value");
+    const currentlySelectedColor = colorGroup.querySelector(".selected-value");
+    const selectedColorValue = currentlySelectedColor?.getAttribute("color-property");
+
+    // Hide or show colors based on size match
+    colorOptions.forEach((colorOption) => {
+      const colorValue = colorOption.getAttribute("available-color");
+      const isMatching = selectedSizeValue && colorValue === selectedSizeValue;
+      colorOption.classList.toggle("hidden", !isMatching);
+    });
+
+    // If the selected color is no longer available, auto-select first valid one
+    if (currentlySelectedColor?.classList.contains("hidden")) {
+      currentlySelectedColor.classList.remove("selected-value");
+      const firstAvailableColor = colorGroup.querySelector(".color_value:not(.hidden):not(.outStock)");
+      if (firstAvailableColor) {
+        firstAvailableColor.classList.add("selected-value");
+        updateSizeInventoryFromColor(variantBlock);
+      }
+    }
+  }
+
+  // Update size inventory based on selected color
+  function updateSizeInventoryFromColor(variantBlock) {
+    const colorGroup = variantBlock.querySelector(".selected_color");
+    const sizeGroup = variantBlock.querySelector(".selected_size");
+
+    const selectedColorEl = colorGroup.querySelector(".selected-value .selected-value-place");
+    const colorInventory = selectedColorEl ? parseInt(selectedColorEl.getAttribute("inventory-qty")) || 0 : 0;
+    const selectedColorValue = colorGroup.querySelector(".selected-value")?.getAttribute("available-color");
+
+    sizeGroup.querySelectorAll(".size_value").forEach((sizeOption) => {
+      const sizeValue = sizeOption.getAttribute("available-size");
+      const isMatch = selectedColorValue && sizeValue === selectedColorValue;
+
+      if (isMatch) {
+        sizeOption.setAttribute("inventory-qty-size", colorInventory);
+        sizeOption.classList.toggle("outStock", colorInventory <= 0);
+      }
+    });
+  }
+
+  /** ----------------------------------------------------------
+   * SECTION 5: Line Item Property Collection
+   * ---------------------------------------------------------- */
+  function collectLineItemProperties() {
+    const properties = {};
+
+    let wrapperPairs;
+    {% if template.suffix contains "pair-socks" or "football-grip-socks" %}
+      wrapperPairs = document.querySelectorAll(".dynamic-content.active-content .wrapper_pair");
+    {% else %}
+      wrapperPairs = document.querySelectorAll(".wrapper_pair");
+    {% endif %}
+    wrapperPairs.forEach((variantBlock, index) => {
+      const titleLabel = variantBlock.querySelector(".title_label");
+      const colorGroup = variantBlock.querySelector(".selected_color");
+      const sizeGroup = variantBlock.querySelector(".selected_size");
+
+      const pairTitle = titleLabel ? titleLabel.textContent.trim() : `Pair ${index + 1}`;
+      const selectedColorValue = colorGroup.querySelector(".selected-value");
+      const selectedColorPlace = colorGroup.querySelector(".selected-value .selected-value-place");
+
+      let selectedColor = "";
+      let variantId = "";
+      if (selectedColorValue) {
+        const colorTitle = selectedColorValue.querySelector(".color_title");
+        selectedColor = colorTitle?.textContent.trim() || selectedColorValue.getAttribute("color-property") || "";
+        variantId = selectedColorValue.getAttribute("data-variant-id") || "";
+      }
+
+      const selectedSizeEl = sizeGroup.querySelector(".selected-value");
+      const selectedSize = selectedSizeEl ? selectedSizeEl.textContent.trim().replace(/\s+/g, " ") : "";
+
+      if (selectedColor && selectedSize) {
+        const cleanTitle = pairTitle.replace(":", "").trim();
+        properties[cleanTitle] = `${selectedColor} (${selectedSize})`;
+        if (variantId) {
+          properties[`${cleanTitle} Variant ID`] = variantId;
+        }
+      }
+    });
+    return properties;
+  }
+
+  window.collectLineItemProperties = collectLineItemProperties;
+
+  /** ----------------------------------------------------------
+   * SECTION 6: Add Properties to Cart Form
+   * ---------------------------------------------------------- */
+  function addLineItemPropertiesToForm(form, properties) {
+    // Remove existing hidden inputs
+    if (Object.keys(properties).length > 0){
+    form.querySelectorAll('input[name^="properties["]').forEach((input) => input.remove());
+
+    // Add updated properties
+    Object.entries(properties).forEach(([key, value]) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = `properties[${key.replace(/:/g, "")}]`;
+      input.value = value;
+      form.appendChild(input);
+    });
+    } else if (Object.keys(properties).length == 0) {
+      form.querySelectorAll('input[name^="properties["]').forEach((input) => input.remove());
+    }
+  }
+
+  // Updates the hidden property inputs dynamically
+  function updatePropertiesInForm() {
+    if (!productForm) return;
+    const properties = collectLineItemProperties();
+      addLineItemPropertiesToForm(productForm, properties);
+  }
+
+  window.updatePropertiesInForm = updatePropertiesInForm;
+
+  /** ----------------------------------------------------------
+   * SECTION 7: Initialize Variant Blocks (Event Listeners)
+   * ---------------------------------------------------------- */
+  document.querySelectorAll(".wrapper_pair").forEach((variantBlock) => {
+    const infoDisplay = variantBlock.querySelector(".variant-info-display");
+    const selectedColorText = variantBlock.querySelector(".swatch-color");
+    const colorGroup = variantBlock.querySelector(".selected_color");
+    const sizeGroup = variantBlock.querySelector(".selected_size");
+
+    function getSelectedColor() {
+      return colorGroup.querySelector(".selected-value span")?.innerText.trim() || "";
+    }
+
+    function getSelectedSize() {
+      return sizeGroup.querySelector(".selected-value")?.innerText.trim() || "";
+    }
+
+    function updateDisplay() {
+      const color = getSelectedColor();
+      const size = getSelectedSize();
+
+      if (infoDisplay) infoDisplay.textContent = ` ${color} (${size})`;
+      if (selectedColorText) selectedColorText.textContent = ` ${color}`;
+
+      checkInventory();
+      updatePropertiesInForm();
+    }
+
+    // Initial setup
+    filterColorsBySelectedSize(variantBlock);
+    updateSizeInventoryFromColor(variantBlock);
+    updateDisplay();
+
+    // Handle color selection
+    colorGroup.addEventListener("click", (e) => {
+      const clickedEl = e.target.closest(".selected-value-place");
+      if (!clickedEl) return;
+
+      const colorValueEl = clickedEl.closest(".color_value");
+      const isInvalid = colorValueEl?.classList.contains("outStock") || colorValueEl?.classList.contains("hidden");
+      if (isInvalid) return;
+
+      const inventoryQty = parseInt(clickedEl.getAttribute("inventory-qty")) || 0;
+      if (inventoryQty <= 0) return;
+
+      colorGroup.querySelectorAll(".selected-value").forEach((el) => el.classList.remove("selected-value"));
+      clickedEl.parentElement.classList.add("selected-value");
+
+      updateSizeInventoryFromColor(variantBlock);
+      updateDisplay();
+    });
+
+    // Handle size selection
+    sizeGroup.addEventListener("click", (e) => {
+    const clicked = e.target.closest(".size_value");
+    if (!clicked || clicked.classList.contains("outStock")) return;
+
+    const clickedSizeValue = clicked.getAttribute("available-size");
+
+    // Check if ANY color matching this size has inventory > 0
+    const matchingColorWithInventory = colorGroup.querySelector(
+      `.color_value[available-color="${clickedSizeValue}"]:not(.outStock)`
+    );
+
+    if (!matchingColorWithInventory) {
+      // No colors available for this size
+      return;
+    }
+
+    // Remember current color before size change
+    const currentColor = colorGroup.querySelector(".selected-value")?.getAttribute("color-property");
+
+    // Select the clicked size
+    sizeGroup.querySelectorAll(".selected-value").forEach((el) => el.classList.remove("selected-value"));
+    clicked.classList.add("selected-value");
+
+    // Filter colors after selecting size
+    filterColorsBySelectedSize(variantBlock);
+
+    // Try to reapply current color if still valid
+    if (currentColor) {
+      const reselectColor = colorGroup.querySelector(
+        `[color-property="${currentColor}"]:not(.hidden):not(.outStock)`
+      );
+      if (reselectColor) {
+        colorGroup.querySelectorAll(".selected-value").forEach((el) => el.classList.remove("selected-value"));
+        reselectColor.classList.add("selected-value");
+        updateSizeInventoryFromColor(variantBlock);
+        updateDisplay();
+        return;
+      }
+    }
+
+    // If current color is invalid, auto-select first available color for this size
+    if (matchingColorWithInventory) {
+      colorGroup.querySelectorAll(".selected-value").forEach((el) => el.classList.remove("selected-value"));
+      matchingColorWithInventory.classList.add("selected-value");
+      updateSizeInventoryFromColor(variantBlock);
+    }
+
+    updateDisplay();
+  });
+  });
+
+  /** ----------------------------------------------------------
+   * SECTION 8: Page Load Initialization
+   * ---------------------------------------------------------- */
+  checkInventory();
+  updatePropertiesInForm();
+});
+
+</script>
+{% endif %}
