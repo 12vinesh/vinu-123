@@ -421,7 +421,7 @@
       input.value = value;
       form.appendChild(input);
     });
-    console.log("form", form);
+    console.log("form", productForm);
     } else if (Object.keys(properties).length == 0) {
       form.querySelectorAll('input[name^="properties["]').forEach((input) => input.remove());
     }
