@@ -371,11 +371,7 @@
     const properties = {};
 
     let wrapperPairs;
-    {% if template.suffix contains "grip-socks" %}
-      wrapperPairs = document.querySelectorAll(".dynamic-content.active-content .wrapper_pair");
-    {% else %}
       wrapperPairs = document.querySelectorAll(".wrapper_pair");
-    {% endif %}
     wrapperPairs.forEach((variantBlock, index) => {
       const titleLabel = variantBlock.querySelector(".title_label");
       const colorGroup = variantBlock.querySelector(".selected_color");
