@@ -182,13 +182,14 @@
             <button type="button" class="bundle-pairs__toggle" data-bundle-toggle aria-expanded="true">
               Hide {{ pair_count }} items ▲
             </button>
-           <ul class="bundle-pairs__list list-unstyled" data-bundle-pairs-list>
+         <ul class="bundle-pairs__list list-unstyled" data-bundle-pairs-list>
   {%- for property in item.properties -%}
     {%- assign prop_key_lower = property.first | downcase -%}
     {%- unless prop_key_lower contains 'variant id' -%}
       {%- unless prop_key_lower contains 'bundlepair' -%}
         {%- if prop_key_lower contains 'pair' -%}
-         {%- assign variant_id_key = '_' | append: property.first | append: ' Variant ID' -%}
+          {%- assign variant_id_key = '_' | append: property.first | append: ' Variant ID' -%}
+          {%- assign variant_id = '' -%}
           {%- for prop2 in item.properties -%}
             {%- if prop2.first == variant_id_key -%}
               {%- assign variant_id = prop2.last -%}
