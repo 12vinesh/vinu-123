@@ -660,6 +660,9 @@
                 </product-recommendations>
               {%- when 'icon-with-text' -%}
                 {% render 'icon-with-text', block: block %}
+
+              {%- when 'bundle' -%}
+                {% render 'pair-bundle' , product:product %}
             {%- endcase -%}
           {%- endfor -%}
           <a href="{{ product.url }}" class="link product__view-details animate-arrow">
@@ -1449,6 +1452,11 @@
           "default": false
         }
       ]
+    },
+    {
+      "type": "bundle",
+      "name": "Bundle",
+      "limit": 1
     },
     {
       "type": "icon-with-text",
