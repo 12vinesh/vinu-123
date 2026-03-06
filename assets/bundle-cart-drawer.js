@@ -180,77 +180,62 @@
       const res = await fetch('/cart.js');
       const cart = await res.json();
 
-      // Find all lines with this bundleKey
-      const bundleItems = cart.items.filter(
-        item => item.properties?._bundleKey === bundleKey
-      );
+      // Build updates object — remove all bundle lines at once
+      const updates = {};
+      cart.items.forEach(item => {
+        if (item.properties?._bundleKey === bundleKey) {
+          updates[item.key] = 0;
+        }
+      });
 
-      console.log('Removing', bundleItems.length, 'bundle lines');
+      console.log('Removing bundle lines:', Object.keys(updates).length);
 
-      // Remove each line one by one using item.key
-      for (const item of bundleItems) {
-        await fetch('/cart/change.js', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: item.key, quantity: 0 }),
-        });
-      }
+      // Remove all at once — faster than one by one
+      await fetch('/cart/update.js', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates }),
+      });
 
-      // Get updated cart after removal
-      const updatedRes = await fetch('/cart.js');
-      const updatedCart = await updatedRes.json();
-      console.log('Remaining items:', updatedCart.item_count);
+      // Full page section refresh
+      const sectionRes = await fetch('/?section_id=cart-drawer');
+      const html = await sectionRes.text();
 
-      // Refresh drawer
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
       const cartDrawerEl = document.querySelector('cart-drawer');
 
-      fetch('/?section_id=cart-drawer')
-        .then(r => r.text())
-        .then(html => {
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(html, 'text/html');
+      // Replace entire cart drawer inner
+      const newInner = doc.querySelector('.drawer__inner');
+      const oldInner = document.querySelector('.drawer__inner');
+      if (newInner && oldInner) {
+        oldInner.innerHTML = newInner.innerHTML;
+      }
 
-          // Update drawer items
-          const newDrawerItems = doc.querySelector('cart-drawer-items');
-          const oldDrawerItems = document.querySelector('cart-drawer-items');
-          if (newDrawerItems && oldDrawerItems) {
-            oldDrawerItems.innerHTML = newDrawerItems.innerHTML;
-          }
+      // Update cart count
+      const newCount = doc.querySelector('.cart-count-bubble');
+      const oldCount = document.querySelector('.cart-count-bubble');
+      if (newCount && oldCount) {
+        oldCount.innerHTML = newCount.innerHTML;
+      } else if (oldCount) {
+        oldCount.innerHTML = '';
+      }
 
-          // Update footer
-          const newFooter = doc.querySelector('.drawer__footer');
-          const oldFooter = document.querySelector('.drawer__footer');
-          if (newFooter && oldFooter) {
-            oldFooter.innerHTML = newFooter.innerHTML;
-          }
+      // Get updated cart to check if empty
+      const updatedCart = await fetch('/cart.js').then(r => r.json());
 
-          // Update cart count bubble
-          const newCount = doc.querySelector('.cart-count-bubble');
-          const oldCount = document.querySelector('.cart-count-bubble');
-          if (newCount && oldCount) {
-            oldCount.innerHTML = newCount.innerHTML;
-          }
-
-          // Handle empty cart
-          if (updatedCart.item_count === 0 && cartDrawerEl) {
-            cartDrawerEl.classList.add('is-empty');
-            // Also update inner empty content
-            const newInnerEmpty = doc.querySelector('.drawer__inner-empty');
-            const oldInner = document.querySelector('.drawer__inner');
-            if (newInnerEmpty && oldInner) {
-              oldInner.innerHTML = doc.querySelector('.drawer__inner').innerHTML;
-            }
-          }
-
-          // Re-hydrate bundle items
-          hydrateBundleItems();
-        });
+      if (updatedCart.item_count === 0 && cartDrawerEl) {
+        cartDrawerEl.classList.add('is-empty');
+      } else {
+        hydrateBundleItems();
+      }
 
     } catch (err) {
       console.error('Bundle remove error:', err);
     }
   }, true);
 }
+
 function debouncedHydrate() {
     clearTimeout(hydrateTimer);
     hydrateTimer = setTimeout(() => {
