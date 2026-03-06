@@ -244,17 +244,24 @@
  {% comment %} size swatch {% endcomment %}
       {% comment %} <div class="swatch-names">Size: <span class="swatch-size"></span> </div> {% endcomment %}
        <div class="selected_size">
-    {% for selected_size in metaobject.selected_size.value %}
-       {% assign inventorySizeQty = selected_size.inventory_quantity %}
-       <div class="{% if forloop.first %} selected-value {% endif %} size_value" inventory-qty-size="{{ inventorySizeQty }}"  available-size="{{ selected_size.title  | split: ' ' | first }}">
-          {% assign sizetext = selected_size.title %}
-        {% assign mainsize = sizetext | split: " / " | first %}
-      {{ mainsize }}
-       {% unless template contains 'grip-socks' %}
-        <i class="fa fa-check fa-check-size" aria-hidden="true"></i>
-      {% endunless %}
-       </div>
-        {% endfor %}
+   {%- assign shown_sizes = '' -%}
+{%- for selected_size in metaobject.selected_size.value -%}
+  {%- assign inventorySizeQty = selected_size.inventory_quantity -%}
+  {%- assign sizetext = selected_size.title | split: ' / ' | first | strip -%}
+  {%- assign size_key = sizetext | downcase | strip -%}
+
+  {%- unless shown_sizes contains size_key -%}
+    {%- assign shown_sizes = shown_sizes | append: size_key | append: '|' -%}
+
+    <div class="{% if forloop.first %}selected-value {% endif %}size_value"
+      inventory-qty-size="{{ inventorySizeQty }}"
+      available-size="{{ sizetext }}">
+      {{ sizetext }}
+      <i class="fa fa-check fa-check-size" aria-hidden="true"></i>
+    </div>
+
+  {%- endunless -%}
+{%- endfor -%}
        </div>
     {% comment %}end  size swatch {% endcomment %}
 </div>
