@@ -200,7 +200,7 @@
           {% assign colorCode = selected_color.featured_image.alt %}
           {% assign Colortext = selected_color.title | split: " / " | last  %}
         {% assign maincolor = Colortext | split: " / " | last %}
-       <div class="{% if forloop.first %} selected-value {% endif %} color_value {% if inventoryQty <= 0 %} outStock {% endif %}" data-variant-id="{{ selected_color.id }}" color-property="{{ selected_color.title | split: ' / ' | last }}" available-color="{{ selected_color.title | split: ' ' | first }}">
+        <div class="{% if forloop.first %} selected-value {% endif %} color_value {% if inventoryQty <= 0 %} outStock {% endif %}" data-variant-id={{ selected_color.id }} color-property="{{ selected_color.title | split: " / " | last }}" available-color="{{ selected_color.title | split: ' ' | first }}">
             <span style="{% if Colortext == 'All White' %}
             background: linear-gradient(135deg, #f0f0f0  0%, #f0f0f0  50%, #ffffff 50%, #ffffff 100%);
           {% else %}
@@ -556,138 +556,111 @@
   });
   });
 
- /** ----------------------------------------------------------
+  /** ----------------------------------------------------------
    * SECTION 8: Page Load Initialization
    * ---------------------------------------------------------- */
-  checkInventory();
-  updatePropertiesInForm();
+ checkInventory();
+updatePropertiesInForm();
 
-  document.addEventListener(
-    "submit",
-    async function (e) {
-      const form = e.target.closest('form[action*="/cart/add"]');
-      if (!form) return;
+document.addEventListener(
+  "submit",
+  function (e) {
+    const form = e.target.closest('form[action*="/cart/add"]');
+    if (!form) return;
 
-      const wrapperPairs = document.querySelectorAll(".wrapper_pair");
-      if (!wrapperPairs.length) return;
+    if (typeof collectLineItemProperties !== "function") return;
 
-      e.preventDefault();
-      e.stopImmediatePropagation();
+    // Collect the properties you already use (_bundlePairIds, _bundlePairLabels, etc.)
+    const properties = collectLineItemProperties();
+    if (!properties || Object.keys(properties).length === 0) return;
 
-      const submitBtn = form.querySelector('[type="submit"]');
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Adding...';
-      }
+    // IMPORTANT: prevent the normal form submit
+    e.preventDefault();
 
-      try {
-        const properties = collectLineItemProperties();
-        console.log('Properties:', JSON.stringify(properties, null, 2));
+    // 1. Get the parent (bundle) variant ID from the form
+    const bundleVariantInput = form.querySelector('[name="id"]');
+    if (!bundleVariantInput) {
+      console.error('Bundle variant input [name="id"] not found');
+      return;
+    }
+    const bundleVariantId = Number(bundleVariantInput.value);
 
-        const variantInput = form.querySelector('[name="id"]');
-        const bundleVariantId = variantInput?.value;
-        console.log('Bundle variant ID:', bundleVariantId);
+    // 2. Extract pair IDs and labels from properties
+    const rawIds = properties._bundlePairIds || properties._bundlePairIDs || "";
+    const rawLabels = properties._bundlePairLabels || "";
 
-        if (!bundleVariantId) throw new Error('No bundle variant ID found');
+    const variantIds = rawIds
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
 
-        const rawIds = properties['_bundlePairIds'] || '';
-        const rawLabels = properties['_bundlePairLabels'] || '';
+    const pairLabels = rawLabels
+      ? rawLabels.split(",").map((s) => s.trim())
+      : variantIds.map((_, i) => `Pair ${i + 1}`);
 
-        const variantIds = rawIds.split(',').map(s => s.trim()).filter(Boolean);
-        const pairLabels = rawLabels
-          ? rawLabels.split(',').map(s => s.trim())
-          : variantIds.map((_, i) => `Pair ${i + 1}`);
+    if (variantIds.length === 0) {
+      console.error("No _bundlePairIds found in properties");
+      return;
+    }
 
-        console.log('Variant IDs:', variantIds);
-        console.log('Pair labels:', pairLabels);
+    // 3. Create a unique key to tie parent + children together
+    const bundleKey = `bundle-${Date.now()}`;
 
-        if (variantIds.length === 0) throw new Error('No pair variant IDs found');
+    // 4. Build items array for /cart/add.js
+    var items = [];
 
-        const bundleKey = `bundle-${Date.now()}`;
+    // 4a. Parent line: the bundle product itself
+    items.push({
+      id: bundleVariantId,
+      quantity: 1,
+      properties: {
+        _bundleKey: bundleKey,
+        _isParent: "true",
+        // You can keep other top-level properties if you want:
+        // _bundleName: properties._bundleName || '',
+      },
+    });
 
-        const items = [];
+    // 4b. Child lines: one per selected pair variant
+    variantIds.forEach((variantId, index) => {
+      const numericId = Number(variantId);
+      const label = pairLabels[index] || `Pair ${index + 1}`;
 
-        // Parent line
-        items.push({
-          id: parseInt(bundleVariantId),
-          quantity: 1,
-          properties: {
-            '_bundleKey': bundleKey,
-            '_isParent': 'true',
-          }
-        });
+      items.push({
+        id: numericId,
+        quantity: 1,
+        properties: {
+          _bundleKey: bundleKey,
+          _isChild: "true",
+          _pairLabel: label,
+        },
+      });
+    });
 
-        // Child lines
-        variantIds.forEach((variantId, index) => {
-          items.push({
-            id: parseInt(variantId),
-            quantity: 1,
-            properties: {
-              '_bundleKey': bundleKey,
-              '_isChild': 'true',
-              '_pairLabel': pairLabels[index] || `Pair ${index + 1}`,
-            }
-          });
-        });
+    // 5. Send to Shopify Ajax cart endpoint
+    fetch("/cart/add.js", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ items }),
+    })
+      .then((res) => res.json())
+      .then((cart) => {
+        // 6. Optionally trigger your cart drawer refresh here
+        // Example (depends on how your theme works):
+        // document.dispatchEvent(new CustomEvent('cart:refresh', { detail: cart }));
 
-        console.log('Items to add:', JSON.stringify(items, null, 2));
+        // If your theme normally reloads on add-to-cart, you could also:
+        // window.location.reload();
+      })
+      .catch((error) => {
+        console.error("Error adding bundle items to cart", error);
+      });
+  },
+  true // capture phase, keep this as you had it
+);
 
-        const response = await fetch('/cart/add.js', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: JSON.stringify({ items }),
-        });
-
-        const data = await response.json();
-        console.log('Cart add response:', JSON.stringify(data, null, 2));
-
-        if (data.status) {
-          throw new Error(data.description || 'Error adding to cart');
-        }
-
-        // Refresh cart drawer
-        const cartDrawerEl = document.querySelector('cart-drawer');
-
-        fetch('/?section_id=cart-drawer')
-          .then(r => r.text())
-          .then(html => {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-
-            const newDrawer = doc.querySelector('#CartDrawer');
-            const oldDrawer = document.querySelector('#CartDrawer');
-            if (newDrawer && oldDrawer) {
-              oldDrawer.innerHTML = newDrawer.innerHTML;
-            }
-
-            const newCount = doc.querySelector('.cart-count-bubble');
-            const oldCount = document.querySelector('.cart-count-bubble');
-            if (newCount && oldCount) {
-              oldCount.innerHTML = newCount.innerHTML;
-            }
-
-            if (cartDrawerEl) {
-              cartDrawerEl.classList.remove('is-empty');
-              if (typeof cartDrawerEl.open === 'function') {
-                cartDrawerEl.open();
-              }
-            }
-          });
-
-      } catch (err) {
-        console.error('Bundle add error:', err);
-        alert('Error adding to cart: ' + err.message);
-      } finally {
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Add to cart';
-        }
-      }
-    },
-    true
-  );
 </script>
 {% endif %}
