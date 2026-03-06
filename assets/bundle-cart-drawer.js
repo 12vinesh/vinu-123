@@ -178,37 +178,66 @@
     const res = await fetch('/cart.js');
     const cart = await res.json();
 
-    // Build array of variant IDs to set to 0
     const updates = {};
     cart.items.forEach(item => {
       if (item.properties?._bundleKey === bundleKey) {
-        // Use variant id as key — set quantity to 0
         updates[item.key] = 0;
       }
     });
 
-    console.log('Removing bundle lines:', updates);
+    console.log('Removing:', updates);
 
-    await fetch('/cart/update.js', {
+    const updateRes = await fetch('/cart/update.js', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ updates }),
     });
 
-    // Refresh drawer
+    const updatedCart = await updateRes.json();
+    console.log('Updated cart item count:', updatedCart.item_count);
+
+    // Use Dawn's built-in cart refresh
+    const cartDrawerEl = document.querySelector('cart-drawer');
+
     fetch('/?section_id=cart-drawer')
       .then(r => r.text())
       .then(html => {
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
-        const newDrawer = doc.querySelector('#CartDrawer');
-        const oldDrawer = document.querySelector('#CartDrawer');
-        if (newDrawer && oldDrawer) oldDrawer.innerHTML = newDrawer.innerHTML;
+
+        // Update drawer contents
+        const newDrawerItems = doc.querySelector('cart-drawer-items');
+        const oldDrawerItems = document.querySelector('cart-drawer-items');
+        if (newDrawerItems && oldDrawerItems) {
+          oldDrawerItems.innerHTML = newDrawerItems.innerHTML;
+        }
+
+        // Update footer
+        const newFooter = doc.querySelector('.drawer__footer');
+        const oldFooter = document.querySelector('.drawer__footer');
+        if (newFooter && oldFooter) {
+          oldFooter.innerHTML = newFooter.innerHTML;
+        }
+
+        // Update cart count bubble
         const newCount = doc.querySelector('.cart-count-bubble');
         const oldCount = document.querySelector('.cart-count-bubble');
-        if (newCount && oldCount) oldCount.innerHTML = newCount.innerHTML;
+        if (newCount && oldCount) {
+          oldCount.innerHTML = newCount.innerHTML;
+        } else if (oldCount && updatedCart.item_count === 0) {
+          oldCount.innerHTML = '';
+        }
+
+        // Handle empty cart state
+        if (updatedCart.item_count === 0 && cartDrawerEl) {
+          cartDrawerEl.classList.add('is-empty');
+        }
+
+        // Re-hydrate bundle items in new content
+        hydrateBundleItems();
       });
   }, true);
+}
 }
 function debouncedHydrate() {
     clearTimeout(hydrateTimer);
