@@ -273,83 +273,14 @@
     
 {% if product.metafields.custom.product_variants != blank  %} 
 <script>
-
-  document.addEventListener("DOMContentLoaded", function () {
-  /** ----------------------------------------------------------
-   * SECTION 1: Accordion Toggle for Pair Titles
-   * ---------------------------------------------------------- */
-  const titlePairs = document.querySelectorAll(".title_pair");
-
-  titlePairs.forEach((title) => {
-    title.addEventListener("click", () => {
-      const accordionIcon = title.children[2];
-      accordionIcon.classList.toggle("accordion-active");
-
-      const content = title.nextElementSibling;
-      if (content && content.classList.contains("accordion_content")) {
-        content.classList.toggle("open");
-      }
-    });
-  });
-
-  /** ----------------------------------------------------------
-   * SECTION 2: Product Form Detection
-   * ---------------------------------------------------------- */
-  let productForm = document.querySelector('form[action*="/cart/add"]');
-
-  // Fallback: Try to find product form by common patterns
-  if (!productForm) {
-    document.querySelectorAll("form").forEach((form) => {
-      if (form.querySelector('[name="add"]') || form.querySelector(".product-form__submit")) {
-        productForm = form;
-      }  
-    });
-  }
-
-  const addToCartButton = document.querySelector(".product-form__submit");
-
-  /** ----------------------------------------------------------
-   * SECTION 3: Inventory Handling
-   * ---------------------------------------------------------- */
-  function checkInventory() {
-    let availableItems = 0;
-    let totalItems = 0;
-
-    document.querySelectorAll(".wrapper_pair").forEach((variantBlock) => {
-      const colorGroup = variantBlock.querySelector(".selected_color");
-      const sizeGroup = variantBlock.querySelector(".selected_size");
-
-      const colorEl = colorGroup.querySelector(".selected-value .selected-value-place");
-      const sizeEl = sizeGroup.querySelector(".selected-value");
-
-      const colorQty = colorEl ? parseInt(colorEl.getAttribute("inventory-qty")) || 0 : 0;
-      const sizeQty = sizeEl ? parseInt(sizeEl.getAttribute("inventory-qty-size")) || 0 : 0;
-
-      totalItems++;
-      if (colorQty > 0 && sizeQty > 0) availableItems++;
-    });
-
-    if (addToCartButton) {
-      const isAvailable = availableItems > 0;
-      addToCartButton.disabled = !isAvailable;
-      addToCartButton.style.opacity = isAvailable ? "1" : "0.5";
-      addToCartButton.style.cursor = isAvailable ? "pointer" : "not-allowed";
-    }
-  }
 /** ----------------------------------------------------------
- * SECTION 4: Dynamic Color & Size Filtering Logic
+ * VARIANT MAP — must be outside DOMContentLoaded
  * ---------------------------------------------------------- */
-
-// Build variant map from liquid data
-// Format: { "White|S - US6 - 9.5": { variantId, inventory } }
-// Build variant map from DOM instead of Liquid
 const variantMap = {};
 
-
-// Better approach — store all variants via Liquid inline
 const allVariantData = [
-  {% for metaobject in product.metafields.custom.product_variants.value %}
-    {% for variant in metaobject.selected_color.value %}
+  {%- for metaobject in product.metafields.custom.product_variants.value -%}
+    {%- for variant in metaobject.selected_color.value -%}
       {
         pairIndex: {{ forloop.parentloop.index0 }},
         variantId: "{{ variant.id }}",
@@ -357,14 +288,12 @@ const allVariantData = [
         size: "{{ variant.title | split: ' / ' | first | strip }}",
         inventory: {{ variant.inventory_quantity }},
       },
-    {% endfor %}
-  {% endfor %}
+    {%- endfor -%}
+  {%- endfor -%}
 ];
 
-// Build lookup map
 allVariantData.forEach(v => {
-  const key = `${v.pairIndex}|${v.colour}|${v.size}`;
-  variantMap[key] = v;
+  variantMap[`${v.pairIndex}|${v.colour}|${v.size}`] = v;
 });
 
 function getVariantForColourSize(pairIndex, colour, size) {
@@ -372,17 +301,14 @@ function getVariantForColourSize(pairIndex, colour, size) {
 }
 
 function filterColorsBySelectedSize(variantBlock) {
-  const pairIndex = Array.from(
-    document.querySelectorAll('.wrapper_pair')
-  ).indexOf(variantBlock);
-
+  const pairIndex = Array.from(document.querySelectorAll('.wrapper_pair')).indexOf(variantBlock);
   const sizeGroup = variantBlock.querySelector(".selected_size");
   const colorGroup = variantBlock.querySelector(".selected_color");
-
-  const selectedSizeEl = sizeGroup.querySelector(".selected-value");
-  const selectedSize = selectedSizeEl?.getAttribute("available-size");
+  const selectedSize = sizeGroup.querySelector(".selected-value")?.getAttribute("available-size");
 
   if (!selectedSize) return;
+
+  const currentSelectedColor = colorGroup.querySelector(".selected-value");
 
   colorGroup.querySelectorAll(".color_value").forEach((colorOption) => {
     const colorName = colorOption.getAttribute("color-property");
@@ -399,36 +325,26 @@ function filterColorsBySelectedSize(variantBlock) {
     }
   });
 
-  // If selected colour is now hidden, pick first available
-  const selectedColor = colorGroup.querySelector(".selected-value");
-  if (selectedColor?.classList.contains("hidden")) {
-    selectedColor.classList.remove("selected-value");
-    const firstAvailable = colorGroup.querySelector(
-      ".color_value:not(.hidden):not(.outStock)"
-    );
+  if (currentSelectedColor?.classList.contains("hidden")) {
+    currentSelectedColor.classList.remove("selected-value");
+    const firstAvailable = colorGroup.querySelector(".color_value:not(.hidden):not(.outStock)");
     if (firstAvailable) firstAvailable.classList.add("selected-value");
   }
 }
 
 function updateSizeInventoryFromColor(variantBlock) {
-  const pairIndex = Array.from(
-    document.querySelectorAll('.wrapper_pair')
-  ).indexOf(variantBlock);
-
+  const pairIndex = Array.from(document.querySelectorAll('.wrapper_pair')).indexOf(variantBlock);
   const colorGroup = variantBlock.querySelector(".selected_color");
   const sizeGroup = variantBlock.querySelector(".selected_size");
-
   const selectedColorEl = colorGroup.querySelector(".selected-value");
   const selectedColor = selectedColorEl?.getAttribute("color-property");
-  const selectedSizeEl = sizeGroup.querySelector(".selected-value");
-  const selectedSize = selectedSizeEl?.getAttribute("available-size");
+  const selectedSize = sizeGroup.querySelector(".selected-value")?.getAttribute("available-size");
 
   if (!selectedColor) return;
 
   sizeGroup.querySelectorAll(".size_value").forEach((sizeOption) => {
     const sizeValue = sizeOption.getAttribute("available-size");
     const variant = getVariantForColourSize(pairIndex, selectedColor, sizeValue);
-
     if (!variant) {
       sizeOption.classList.add("outStock");
       sizeOption.setAttribute("inventory-qty-size", "0");
@@ -438,10 +354,9 @@ function updateSizeInventoryFromColor(variantBlock) {
     }
   });
 
-  // Update selected colour's variant ID for current size
-  if (selectedSize && selectedColor) {
+  if (selectedSize && selectedColor && selectedColorEl) {
     const variant = getVariantForColourSize(pairIndex, selectedColor, selectedSize);
-    if (variant && selectedColorEl) {
+    if (variant) {
       selectedColorEl.setAttribute("data-variant-id", variant.variantId);
       const place = selectedColorEl.querySelector(".selected-value-place");
       if (place) place.setAttribute("inventory-qty", variant.inventory);
@@ -449,118 +364,126 @@ function updateSizeInventoryFromColor(variantBlock) {
   }
 }
 
-  /** ----------------------------------------------------------
-   * SECTION 5: Line Item Property Collection
-   * ---------------------------------------------------------- */
- function collectLineItemProperties() {
-  const properties = {};
-  const variantIds = [];
-  const pairLabels = [];
+/** ----------------------------------------------------------
+ * DOM READY
+ * ---------------------------------------------------------- */
+document.addEventListener("DOMContentLoaded", function () {
 
-  const wrapperPairs = document.querySelectorAll(".wrapper_pair");
-
-  wrapperPairs.forEach((variantBlock, index) => {
-    const titleLabel = variantBlock.querySelector(".title_label");
-    const colorGroup = variantBlock.querySelector(".selected_color");
-    const sizeGroup = variantBlock.querySelector(".selected_size");
-
-    const pairTitle = titleLabel ? titleLabel.textContent.trim() : `Pair ${index + 1}`;
-    const selectedColorValue = colorGroup.querySelector(".selected-value");
-
-    let selectedColor = "";
-    let variantId = "";
-
-    if (selectedColorValue) {
-      const colorTitle = selectedColorValue.querySelector(".color_title");
-      selectedColor = colorTitle?.textContent.trim() || selectedColorValue.getAttribute("color-property") || "";
-      variantId = selectedColorValue.getAttribute("data-variant-id") || "";
-    }
-
-    const selectedSizeEl = sizeGroup.querySelector(".selected-value");
-    const selectedSize = selectedSizeEl ? selectedSizeEl.textContent.trim().replace(/\s+/g, " ") : "";
-
-    if (selectedColor && selectedSize) {
-      const cleanTitle = pairTitle.replace(":", "").trim();
-
-      // Visible property — shows in checkout
-      properties[cleanTitle] = `${selectedColor} (${selectedSize})`;
-
-      // Hidden property — underscore hides from checkout display
-      if (variantId) {
-        properties[`_${cleanTitle} Variant ID`] = variantId;
+  /** SECTION 1: Accordion */
+  document.querySelectorAll(".title_pair").forEach((title) => {
+    title.addEventListener("click", () => {
+      title.children[2].classList.toggle("accordion-active");
+      const content = title.nextElementSibling;
+      if (content?.classList.contains("accordion_content")) {
+        content.classList.toggle("open");
       }
+    });
+  });
 
-      // Collect for Cart Transform single attribute
-      variantIds.push(variantId);
-      pairLabels.push(cleanTitle);
+  /** SECTION 2: Form Detection */
+  let productForm = document.querySelector('form[action*="/cart/add"]');
+  if (!productForm) {
+    document.querySelectorAll("form").forEach((form) => {
+      if (form.querySelector('[name="add"]') || form.querySelector(".product-form__submit")) {
+        productForm = form;
+      }
+    });
+  }
+  const addToCartButton = document.querySelector(".product-form__submit");
+
+  /** SECTION 3: Inventory Check */
+  function checkInventory() {
+    let availableItems = 0;
+    document.querySelectorAll(".wrapper_pair").forEach((variantBlock) => {
+      const colorEl = variantBlock.querySelector(".selected_color .selected-value .selected-value-place");
+      const sizeEl = variantBlock.querySelector(".selected_size .selected-value");
+      const colorQty = parseInt(colorEl?.getAttribute("inventory-qty")) || 0;
+      const sizeQty = parseInt(sizeEl?.getAttribute("inventory-qty-size")) || 0;
+      if (colorQty > 0 && sizeQty > 0) availableItems++;
+    });
+    if (addToCartButton) {
+      addToCartButton.disabled = availableItems === 0;
+      addToCartButton.style.opacity = availableItems > 0 ? "1" : "0.5";
+      addToCartButton.style.cursor = availableItems > 0 ? "pointer" : "not-allowed";
     }
-  }); // ← closing forEach
-
-  // Add single combined attribute for Cart Transform
-  if (variantIds.length > 0) {
-    properties['_bundlePairIds'] = variantIds.join(',');
-    properties['_bundlePairLabels'] = pairLabels.join(',');
   }
 
-  return properties;
-}
+  /** SECTION 5: Collect Properties */
+  function collectLineItemProperties() {
+    const properties = {};
+    const variantIds = [];
+    const pairLabels = [];
+
+    document.querySelectorAll(".wrapper_pair").forEach((variantBlock, index) => {
+      const titleLabel = variantBlock.querySelector(".title_label");
+      const colorGroup = variantBlock.querySelector(".selected_color");
+      const sizeGroup = variantBlock.querySelector(".selected_size");
+      const pairTitle = titleLabel ? titleLabel.textContent.trim() : `Pair ${index + 1}`;
+      const selectedColorEl = colorGroup.querySelector(".selected-value");
+
+      let selectedColor = "";
+      let variantId = "";
+
+      if (selectedColorEl) {
+        const colorTitle = selectedColorEl.querySelector(".color_title");
+        selectedColor = colorTitle?.textContent.trim() || selectedColorEl.getAttribute("color-property") || "";
+        variantId = selectedColorEl.getAttribute("data-variant-id") || "";
+      }
+
+      const selectedSizeEl = sizeGroup.querySelector(".selected-value");
+      const selectedSize = selectedSizeEl ? selectedSizeEl.textContent.trim().replace(/\s+/g, " ") : "";
+
+      if (selectedColor && selectedSize) {
+        const cleanTitle = pairTitle.replace(":", "").trim();
+        properties[cleanTitle] = `${selectedColor} (${selectedSize})`;
+        if (variantId) properties[`_${cleanTitle} Variant ID`] = variantId;
+        variantIds.push(variantId);
+        pairLabels.push(cleanTitle);
+      }
+    });
+
+    if (variantIds.length > 0) {
+      properties['_bundlePairIds'] = variantIds.join(',');
+      properties['_bundlePairLabels'] = pairLabels.join(',');
+    }
+
+    return properties;
+  }
 
   window.collectLineItemProperties = collectLineItemProperties;
 
-  /** ----------------------------------------------------------
-   * SECTION 6: Add Properties to Cart Form
-   * ---------------------------------------------------------- */
+  /** SECTION 6: Add to Form */
   function addLineItemPropertiesToForm(form, properties) {
-    // Remove existing hidden inputs
-    if (Object.keys(properties).length > 0){
-    form.querySelectorAll('input[name^="properties["]').forEach((input) => input.remove());
-
-    // Add updated properties
+    form.querySelectorAll('input[name^="properties["]').forEach(input => input.remove());
     Object.entries(properties).forEach(([key, value]) => {
+      if (!value) return;
       const input = document.createElement("input");
       input.type = "hidden";
       input.name = `properties[${key.replace(/:/g, "")}]`;
       input.value = value;
       form.appendChild(input);
     });
-    } else if (Object.keys(properties).length == 0) {
-      form.querySelectorAll('input[name^="properties["]').forEach((input) => input.remove());
-    }
   }
 
-  // Updates the hidden property inputs dynamically
   function updatePropertiesInForm() {
     if (!productForm) return;
-    const properties = collectLineItemProperties();
-      addLineItemPropertiesToForm(productForm, properties);
+    addLineItemPropertiesToForm(productForm, collectLineItemProperties());
   }
 
   window.updatePropertiesInForm = updatePropertiesInForm;
 
-  /** ----------------------------------------------------------
-   * SECTION 7: Initialize Variant Blocks (Event Listeners)
-   * ---------------------------------------------------------- */
+  /** SECTION 7: Event Listeners per Pair */
   document.querySelectorAll(".wrapper_pair").forEach((variantBlock) => {
     const infoDisplay = variantBlock.querySelector(".variant-info-display");
     const selectedColorText = variantBlock.querySelector(".swatch-color");
     const colorGroup = variantBlock.querySelector(".selected_color");
     const sizeGroup = variantBlock.querySelector(".selected_size");
 
-    function getSelectedColor() {
-      return colorGroup.querySelector(".selected-value span")?.innerText.trim() || "";
-    }
-
-    function getSelectedSize() {
-      return sizeGroup.querySelector(".selected-value")?.innerText.trim() || "";
-    }
-
     function updateDisplay() {
-      const color = getSelectedColor();
-      const size = getSelectedSize();
-
+      const color = colorGroup.querySelector(".selected-value span")?.innerText.trim() || "";
+      const size = sizeGroup.querySelector(".selected-value")?.innerText.trim() || "";
       if (infoDisplay) infoDisplay.textContent = ` ${color} (${size})`;
       if (selectedColorText) selectedColorText.textContent = ` ${color}`;
-
       checkInventory();
       updatePropertiesInForm();
     }
@@ -570,182 +493,151 @@ function updateSizeInventoryFromColor(variantBlock) {
     updateSizeInventoryFromColor(variantBlock);
     updateDisplay();
 
-    // Handle color selection
+    // Colour click
     colorGroup.addEventListener("click", (e) => {
       const clickedEl = e.target.closest(".selected-value-place");
       if (!clickedEl) return;
-
       const colorValueEl = clickedEl.closest(".color_value");
-      const isInvalid = colorValueEl?.classList.contains("outStock") || colorValueEl?.classList.contains("hidden");
-      if (isInvalid) return;
-
+      if (colorValueEl?.classList.contains("outStock") || colorValueEl?.classList.contains("hidden")) return;
       const inventoryQty = parseInt(clickedEl.getAttribute("inventory-qty")) || 0;
       if (inventoryQty <= 0) return;
-
-      colorGroup.querySelectorAll(".selected-value").forEach((el) => el.classList.remove("selected-value"));
-      clickedEl.parentElement.classList.add("selected-value");
-
+      colorGroup.querySelectorAll(".selected-value").forEach(el => el.classList.remove("selected-value"));
+      colorValueEl.classList.add("selected-value");
       updateSizeInventoryFromColor(variantBlock);
       updateDisplay();
     });
 
-    // Handle size selection
+    // Size click
     sizeGroup.addEventListener("click", (e) => {
-    const clicked = e.target.closest(".size_value");
-    if (!clicked || clicked.classList.contains("outStock")) return;
+      const clicked = e.target.closest(".size_value");
+      if (!clicked || clicked.classList.contains("outStock")) return;
 
-    const clickedSizeValue = clicked.getAttribute("available-size");
+      const clickedSize = clicked.getAttribute("available-size");
+      const pairIndex = Array.from(document.querySelectorAll('.wrapper_pair')).indexOf(variantBlock);
 
-    // Check if ANY color matching this size has inventory > 0
-    const matchingColorWithInventory = colorGroup.querySelector(
-      `.color_value[available-color="${clickedSizeValue}"]:not(.outStock)`
-    );
-
-    if (!matchingColorWithInventory) {
-      // No colors available for this size
-      return;
-    }
-
-    // Remember current color before size change
-    const currentColor = colorGroup.querySelector(".selected-value")?.getAttribute("color-property");
-
-    // Select the clicked size
-    sizeGroup.querySelectorAll(".selected-value").forEach((el) => el.classList.remove("selected-value"));
-    clicked.classList.add("selected-value");
-
-    // Filter colors after selecting size
-    filterColorsBySelectedSize(variantBlock);
-
-    // Try to reapply current color if still valid
-    if (currentColor) {
-      const reselectColor = colorGroup.querySelector(
-        `[color-property="${currentColor}"]:not(.hidden):not(.outStock)`
+      // Check if any colour has inventory for this size
+      const hasAvailableColor = allVariantData.some(
+        v => v.pairIndex === pairIndex && v.size === clickedSize && v.inventory > 0
       );
-      if (reselectColor) {
-        colorGroup.querySelectorAll(".selected-value").forEach((el) => el.classList.remove("selected-value"));
-        reselectColor.classList.add("selected-value");
-        updateSizeInventoryFromColor(variantBlock);
-        updateDisplay();
-        return;
+      if (!hasAvailableColor) return;
+
+      const currentColor = colorGroup.querySelector(".selected-value")?.getAttribute("color-property");
+
+      sizeGroup.querySelectorAll(".selected-value").forEach(el => el.classList.remove("selected-value"));
+      clicked.classList.add("selected-value");
+
+      filterColorsBySelectedSize(variantBlock);
+
+      // Try to keep current colour
+      if (currentColor) {
+        const reselectColor = colorGroup.querySelector(
+          `[color-property="${currentColor}"]:not(.hidden):not(.outStock)`
+        );
+        if (reselectColor) {
+          colorGroup.querySelectorAll(".selected-value").forEach(el => el.classList.remove("selected-value"));
+          reselectColor.classList.add("selected-value");
+          updateSizeInventoryFromColor(variantBlock);
+          updateDisplay();
+          return;
+        }
       }
-    }
 
-    // If current color is invalid, auto-select first available color for this size
-    if (matchingColorWithInventory) {
-      colorGroup.querySelectorAll(".selected-value").forEach((el) => el.classList.remove("selected-value"));
-      matchingColorWithInventory.classList.add("selected-value");
-      updateSizeInventoryFromColor(variantBlock);
-    }
+      // Pick first available colour for this size
+      const firstAvailable = colorGroup.querySelector(".color_value:not(.hidden):not(.outStock)");
+      if (firstAvailable) {
+        colorGroup.querySelectorAll(".selected-value").forEach(el => el.classList.remove("selected-value"));
+        firstAvailable.classList.add("selected-value");
+        updateSizeInventoryFromColor(variantBlock);
+      }
 
-    updateDisplay();
+      updateDisplay();
+    });
   });
-  });
 
-  /** ----------------------------------------------------------
-   * SECTION 8: Page Load Initialization
-   * ---------------------------------------------------------- */
- checkInventory();
-updatePropertiesInForm();
+  /** SECTION 8: Init + Submit */
+  checkInventory();
+  updatePropertiesInForm();
 
-document.addEventListener(
-  "submit",
-  function (e) {
+  document.addEventListener("submit", async function (e) {
     const form = e.target.closest('form[action*="/cart/add"]');
     if (!form) return;
+    if (!document.querySelectorAll(".wrapper_pair").length) return;
 
-    if (typeof collectLineItemProperties !== "function") return;
-
-    // Collect the properties you already use (_bundlePairIds, _bundlePairLabels, etc.)
-    const properties = collectLineItemProperties();
-    if (!properties || Object.keys(properties).length === 0) return;
-
-    // IMPORTANT: prevent the normal form submit
     e.preventDefault();
+    e.stopImmediatePropagation();
 
-    // 1. Get the parent (bundle) variant ID from the form
-    const bundleVariantInput = form.querySelector('[name="id"]');
-    if (!bundleVariantInput) {
-      console.error('Bundle variant input [name="id"] not found');
-      return;
-    }
-    const bundleVariantId = Number(bundleVariantInput.value);
+    const submitBtn = form.querySelector('[type="submit"]');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Adding...'; }
 
-    // 2. Extract pair IDs and labels from properties
-    const rawIds = properties._bundlePairIds || properties._bundlePairIDs || "";
-    const rawLabels = properties._bundlePairLabels || "";
+    try {
+      const properties = collectLineItemProperties();
+      const bundleVariantId = form.querySelector('[name="id"]')?.value;
+      if (!bundleVariantId) throw new Error('No bundle variant ID');
 
-    const variantIds = rawIds
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
+      const variantIds = (properties['_bundlePairIds'] || '').split(',').map(s => s.trim()).filter(Boolean);
+      const pairLabels = (properties['_bundlePairLabels'] || '').split(',').map(s => s.trim());
 
-    const pairLabels = rawLabels
-      ? rawLabels.split(",").map((s) => s.trim())
-      : variantIds.map((_, i) => `Pair ${i + 1}`);
+      if (variantIds.length === 0) throw new Error('No pair variant IDs');
 
-    if (variantIds.length === 0) {
-      console.error("No _bundlePairIds found in properties");
-      return;
-    }
-
-    // 3. Create a unique key to tie parent + children together
-    const bundleKey = `bundle-${Date.now()}`;
-
-    // 4. Build items array for /cart/add.js
-    var items = [];
-
-    // 4a. Parent line: the bundle product itself
-    items.push({
-      id: bundleVariantId,
-      quantity: 1,
-      properties: {
-        _bundleKey: bundleKey,
-        _isParent: "true",
-        // You can keep other top-level properties if you want:
-        // _bundleName: properties._bundleName || '',
-      },
-    });
-
-    // 4b. Child lines: one per selected pair variant
-    variantIds.forEach((variantId, index) => {
-      const numericId = Number(variantId);
-      const label = pairLabels[index] || `Pair ${index + 1}`;
-
-      items.push({
-        id: numericId,
-        quantity: 1,
-        properties: {
-          _bundleKey: bundleKey,
-          _isChild: "true",
-          _pairLabel: label,
+      const bundleKey = `bundle-${Date.now()}`;
+      const items = [
+        {
+          id: parseInt(bundleVariantId),
+          quantity: 1,
+          properties: { _bundleKey: bundleKey, _isParent: 'true' }
         },
+        ...variantIds.map((variantId, index) => ({
+          id: parseInt(variantId),
+          quantity: 1,
+          properties: {
+            _bundleKey: bundleKey,
+            _isChild: 'true',
+            _pairLabel: pairLabels[index] || `Pair ${index + 1}`
+          }
+        }))
+      ];
+
+      console.log('Adding items:', JSON.stringify(items, null, 2));
+
+      const response = await fetch('/cart/add.js', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ items }),
       });
-    });
 
-    // 5. Send to Shopify Ajax cart endpoint
-    fetch("/cart/add.js", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ items }),
-    })
-      .then((res) => res.json())
-      .then((cart) => {
-        // 6. Optionally trigger your cart drawer refresh here
-        // Example (depends on how your theme works):
-        // document.dispatchEvent(new CustomEvent('cart:refresh', { detail: cart }));
+      const data = await response.json();
+      console.log('Cart response:', data);
 
-        // If your theme normally reloads on add-to-cart, you could also:
-        // window.location.reload();
-      })
-      .catch((error) => {
-        console.error("Error adding bundle items to cart", error);
-      });
-  },
-  true // capture phase, keep this as you had it
-);
+      if (data.status) throw new Error(data.description || 'Cart error');
 
+      // Refresh cart drawer
+      fetch('/?section_id=cart-drawer')
+        .then(r => r.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          const newDrawer = doc.querySelector('#CartDrawer');
+          const oldDrawer = document.querySelector('#CartDrawer');
+          if (newDrawer && oldDrawer) oldDrawer.innerHTML = newDrawer.innerHTML;
+          const newCount = doc.querySelector('.cart-count-bubble');
+          const oldCount = document.querySelector('.cart-count-bubble');
+          if (newCount && oldCount) oldCount.innerHTML = newCount.innerHTML;
+          const cartDrawerEl = document.querySelector('cart-drawer');
+          if (cartDrawerEl) {
+            cartDrawerEl.classList.remove('is-empty');
+            if (typeof cartDrawerEl.open === 'function') cartDrawerEl.open();
+          }
+        });
+
+    } catch (err) {
+      console.error('Bundle add error:', err);
+      alert('Error: ' + err.message);
+    } finally {
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Add to cart'; }
+    }
+  }, true);
+
+}); // end DOMContentLoaded
 </script>
 {% endif %}
+    
