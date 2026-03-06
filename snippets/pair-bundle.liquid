@@ -580,22 +580,27 @@ document.addEventListener("DOMContentLoaded", function () {
       if (variantIds.length === 0) throw new Error('No pair variant IDs');
 
       const bundleKey = `bundle-${Date.now()}`;
-      const items = [
-        {
-          id: parseInt(bundleVariantId),
-          quantity: 1,
-          properties: { _bundleKey: bundleKey, _isParent: 'true' }
-        },
-        ...variantIds.map((variantId, index) => ({
-          id: parseInt(variantId),
-          quantity: 1,
-          properties: {
-            _bundleKey: bundleKey,
-            _isChild: 'true',
-            _pairLabel: pairLabels[index] || `Pair ${index + 1}`
-          }
-        }))
-      ];
+     const items = [
+  {
+    id: parseInt(bundleVariantId),
+    quantity: 1,
+    properties: {
+      '_bundleKey': bundleKey,
+      '_isParent': 'true',
+      '_bundleId': bundleKey,
+    }
+  },
+  ...variantIds.map((variantId, index) => ({
+    id: parseInt(variantId),
+    quantity: 1,
+    properties: {
+      '_bundleKey': bundleKey,
+      '_isChild': 'true',
+      '_pairLabel': pairLabels[index] || `Pair ${index + 1}`,
+      '_bundleId': bundleKey,
+    }
+  }))
+];
 
       console.log('Adding items:', JSON.stringify(items, null, 2));
 
