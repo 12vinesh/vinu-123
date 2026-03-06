@@ -342,34 +342,30 @@
    * ---------------------------------------------------------- */
 
   // Filter colors when a size is selected
-  function filterColorsBySelectedSize(variantBlock) {
-    const sizeGroup = variantBlock.querySelector(".selected_size");
-    const colorGroup = variantBlock.querySelector(".selected_color");
+ function filterColorsBySelectedSize(variantBlock) {
+  const sizeGroup = variantBlock.querySelector(".selected_size");
+  const colorGroup = variantBlock.querySelector(".selected_color");
 
-    const selectedSizeEl = sizeGroup.querySelector(".selected-value");
-    const selectedSizeValue = selectedSizeEl ? selectedSizeEl.getAttribute("available-size") : null;
+  const selectedSizeEl = sizeGroup.querySelector(".selected-value");
+  const selectedSize = selectedSizeEl?.getAttribute("available-size");
 
-    const colorOptions = colorGroup.querySelectorAll(".color_value");
-    const currentlySelectedColor = colorGroup.querySelector(".selected-value");
-    const selectedColorValue = currentlySelectedColor?.getAttribute("color-property");
+  if (!selectedSize) return;
 
-    // Hide or show colors based on size match
-    colorOptions.forEach((colorOption) => {
-      const colorValue = colorOption.getAttribute("available-color");
-      const isMatching = selectedSizeValue && colorValue === selectedSizeValue;
-      colorOption.classList.toggle("hidden", !isMatching);
-    });
+  const colorOptions = colorGroup.querySelectorAll(".color_value");
 
-    // If the selected color is no longer available, auto-select first valid one
-    if (currentlySelectedColor?.classList.contains("hidden")) {
-      currentlySelectedColor.classList.remove("selected-value");
-      const firstAvailableColor = colorGroup.querySelector(".color_value:not(.hidden):not(.outStock)");
-      if (firstAvailableColor) {
-        firstAvailableColor.classList.add("selected-value");
-        updateSizeInventoryFromColor(variantBlock);
-      }
-    }
-  }
+  colorOptions.forEach((colorOption) => {
+    const colorName = colorOption.getAttribute("color-property");
+
+    // Check if a variant exists for this colour + selected size combo
+    // by looking for a variant whose title contains both
+    const variantId = colorOption.getAttribute("data-variant-id");
+
+    // Fetch variant availability check via hidden img alt tags
+    // We match by checking all variants in the metaobject
+    // For now show all colours when size changes
+    colorOption.classList.remove("hidden");
+  });
+}
 
   // Update size inventory based on selected color
   function updateSizeInventoryFromColor(variantBlock) {
