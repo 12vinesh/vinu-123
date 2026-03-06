@@ -175,69 +175,81 @@
     e.preventDefault();
     e.stopImmediatePropagation();
 
-    const res = await fetch('/cart.js');
-    const cart = await res.json();
+    try {
+      // Get current cart
+      const res = await fetch('/cart.js');
+      const cart = await res.json();
 
-    const updates = {};
-    cart.items.forEach(item => {
-      if (item.properties?._bundleKey === bundleKey) {
-        updates[item.key] = 0;
+      // Find all lines with this bundleKey
+      const bundleItems = cart.items.filter(
+        item => item.properties?._bundleKey === bundleKey
+      );
+
+      console.log('Removing', bundleItems.length, 'bundle lines');
+
+      // Remove each line one by one using item.key
+      for (const item of bundleItems) {
+        await fetch('/cart/change.js', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: item.key, quantity: 0 }),
+        });
       }
-    });
 
-    console.log('Removing:', updates);
+      // Get updated cart after removal
+      const updatedRes = await fetch('/cart.js');
+      const updatedCart = await updatedRes.json();
+      console.log('Remaining items:', updatedCart.item_count);
 
-    const updateRes = await fetch('/cart/update.js', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ updates }),
-    });
+      // Refresh drawer
+      const cartDrawerEl = document.querySelector('cart-drawer');
 
-    const updatedCart = await updateRes.json();
-    console.log('Updated cart item count:', updatedCart.item_count);
+      fetch('/?section_id=cart-drawer')
+        .then(r => r.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
 
-    // Use Dawn's built-in cart refresh
-    const cartDrawerEl = document.querySelector('cart-drawer');
+          // Update drawer items
+          const newDrawerItems = doc.querySelector('cart-drawer-items');
+          const oldDrawerItems = document.querySelector('cart-drawer-items');
+          if (newDrawerItems && oldDrawerItems) {
+            oldDrawerItems.innerHTML = newDrawerItems.innerHTML;
+          }
 
-    fetch('/?section_id=cart-drawer')
-      .then(r => r.text())
-      .then(html => {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
+          // Update footer
+          const newFooter = doc.querySelector('.drawer__footer');
+          const oldFooter = document.querySelector('.drawer__footer');
+          if (newFooter && oldFooter) {
+            oldFooter.innerHTML = newFooter.innerHTML;
+          }
 
-        // Update drawer contents
-        const newDrawerItems = doc.querySelector('cart-drawer-items');
-        const oldDrawerItems = document.querySelector('cart-drawer-items');
-        if (newDrawerItems && oldDrawerItems) {
-          oldDrawerItems.innerHTML = newDrawerItems.innerHTML;
-        }
+          // Update cart count bubble
+          const newCount = doc.querySelector('.cart-count-bubble');
+          const oldCount = document.querySelector('.cart-count-bubble');
+          if (newCount && oldCount) {
+            oldCount.innerHTML = newCount.innerHTML;
+          }
 
-        // Update footer
-        const newFooter = doc.querySelector('.drawer__footer');
-        const oldFooter = document.querySelector('.drawer__footer');
-        if (newFooter && oldFooter) {
-          oldFooter.innerHTML = newFooter.innerHTML;
-        }
+          // Handle empty cart
+          if (updatedCart.item_count === 0 && cartDrawerEl) {
+            cartDrawerEl.classList.add('is-empty');
+            // Also update inner empty content
+            const newInnerEmpty = doc.querySelector('.drawer__inner-empty');
+            const oldInner = document.querySelector('.drawer__inner');
+            if (newInnerEmpty && oldInner) {
+              oldInner.innerHTML = doc.querySelector('.drawer__inner').innerHTML;
+            }
+          }
 
-        // Update cart count bubble
-        const newCount = doc.querySelector('.cart-count-bubble');
-        const oldCount = document.querySelector('.cart-count-bubble');
-        if (newCount && oldCount) {
-          oldCount.innerHTML = newCount.innerHTML;
-        } else if (oldCount && updatedCart.item_count === 0) {
-          oldCount.innerHTML = '';
-        }
+          // Re-hydrate bundle items
+          hydrateBundleItems();
+        });
 
-        // Handle empty cart state
-        if (updatedCart.item_count === 0 && cartDrawerEl) {
-          cartDrawerEl.classList.add('is-empty');
-        }
-
-        // Re-hydrate bundle items in new content
-        hydrateBundleItems();
-      });
+    } catch (err) {
+      console.error('Bundle remove error:', err);
+    }
   }, true);
-}
 }
 function debouncedHydrate() {
     clearTimeout(hydrateTimer);
