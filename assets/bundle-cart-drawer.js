@@ -169,6 +169,51 @@
       hydrateBundleItems();
     }, 300);
   }
+  function handleBundleRemove() {
+  document.addEventListener('click', async (e) => {
+    const removeBtn = e.target.closest('cart-remove-button[data-bundle-key]');
+    if (!removeBtn) return;
+
+    const bundleKey = removeBtn.dataset.bundleKey;
+    if (!bundleKey) return;
+
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    // Get all cart items
+    const res = await fetch('/cart.js');
+    const cart = await res.json();
+
+    // Find all lines with this bundleKey
+    const updates = {};
+    cart.items.forEach((item, index) => {
+      if (item.properties?._bundleKey === bundleKey) {
+        updates[index + 1] = 0; // set quantity to 0
+      }
+    });
+
+    // Remove all at once
+    await fetch('/cart/update.js', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ updates }),
+    });
+
+    // Refresh drawer
+    fetch('/?section_id=cart-drawer')
+      .then(r => r.text())
+      .then(html => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const newDrawer = doc.querySelector('#CartDrawer');
+        const oldDrawer = document.querySelector('#CartDrawer');
+        if (newDrawer && oldDrawer) oldDrawer.innerHTML = newDrawer.innerHTML;
+        const newCount = doc.querySelector('.cart-count-bubble');
+        const oldCount = document.querySelector('.cart-count-bubble');
+        if (newCount && oldCount) oldCount.innerHTML = newCount.innerHTML;
+      });
+  }, true);
+}
 
   document.addEventListener('DOMContentLoaded', () => {
     preloadAllBundleImages();
