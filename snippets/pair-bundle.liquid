@@ -195,21 +195,22 @@
        <div class="swatch-names">COLOUR: <span class="swatch-color"></span> </div>
       
       <div class="selected_color">
-      {%- assign shown_colors = '' -%}
+    {%- assign shown_colors = '' -%}
 {%- assign first_shown = false -%}
 {%- for selected_color in metaobject.selected_color.value -%}
   {%- assign inventoryQty = selected_color.inventory_quantity -%}
   {%- assign colorCode = selected_color.featured_image.alt -%}
   {%- assign Colortext = selected_color.title | split: ' / ' | last -%}
   {%- assign maincolor = Colortext | split: ' / ' | last -%}
- {%- assign color_key = selected_color.title | split: ' / ' | last | downcase | strip -%}
+  {%- assign color_key = Colortext | downcase | strip -%}
+
   {%- unless shown_colors contains color_key -%}
     {%- assign shown_colors = shown_colors | append: color_key | append: '|' -%}
 
     <div class="color_value {% unless first_shown %}selected-value{% endunless %} {% if inventoryQty <= 0 %}outStock{% endif %}"
       data-variant-id="{{ selected_color.id }}"
       color-property="{{ Colortext }}"
-     available-color="{{ selected_color.title | split: ' / ' | last | strip }}">
+      available-color="{{ Colortext }}">
 
       <span style="{% if Colortext == 'All White' %}
           background: linear-gradient(135deg, #f0f0f0 0%, #f0f0f0 50%, #ffffff 50%, #ffffff 100%);
