@@ -647,31 +647,40 @@ document.addEventListener(
       body: JSON.stringify({ items }),
     })
   .then((res) => res.json())
-    .then((data) => {
-        if (data.status === 422 || data.description) {
-          console.error("Cart error:", data.description);
-          return;
-        }
+   .then((data) => {
+  if (data.status === 422 || data.description) {
+    console.error("Cart error:", data.description);
+    return;
+  }
 
-        // Refresh the cart drawer
-        fetch('/cart.js')
-          .then(r => r.json())
-          .then(cartData => {
-            document.dispatchEvent(new CustomEvent('cart:refresh', { bubbles: true }));
-            document.dispatchEvent(new CustomEvent('cart-update', { bubbles: true }));
+  // Dawn theme cart drawer refresh
+  fetch('/?section_id=cart-drawer')
+    .then(r => r.text())
+    .then(html => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
 
-            // Dawn theme specific — updates the cart drawer
-            const cartDrawer = document.querySelector('cart-drawer');
-            if (cartDrawer && typeof cartDrawer.renderContents === 'function') {
-              cartDrawer.renderContents({ detail: cartData });
-            }
+      const newDrawer = doc.querySelector('#CartDrawer');
+      const oldDrawer = document.querySelector('#CartDrawer');
+      if (newDrawer && oldDrawer) {
+        oldDrawer.innerHTML = newDrawer.innerHTML;
+      }
 
-            // Fallback: open the drawer if it exists
-            if (cartDrawer && typeof cartDrawer.open === 'function') {
-              cartDrawer.open();
-            }
-          });
-      })
+      // Update cart count bubble
+      const newCount = doc.querySelector('.cart-count-bubble');
+      const oldCount = document.querySelector('.cart-count-bubble');
+      if (newCount && oldCount) {
+        oldCount.innerHTML = newCount.innerHTML;
+      }
+
+      // Open drawer
+      const cartDrawer = document.querySelector('cart-drawer');
+      if (cartDrawer) {
+        cartDrawer.classList.remove('is-empty');
+        if (typeof cartDrawer.open === 'function') cartDrawer.open();
+      }
+    });
+})
       .catch((error) => {
         console.error("Error adding bundle items to cart", error);
       });
