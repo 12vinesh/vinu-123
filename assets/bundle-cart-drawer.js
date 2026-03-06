@@ -114,6 +114,21 @@
       initToggle(parentEl);
     }
   }
+  // Preload images as soon as page loads
+async function preloadAllBundleImages() {
+  const res = await fetch('/cart.js');
+  const cart = await res.json();
+  
+  cart.items.forEach(item => {
+    const isChild = item.properties?._isChild === 'true';
+    if (isChild) fetchVariant(item.variant_id); // preload into cache
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  preloadAllBundleImages();
+  init();
+});
 
   function initToggle(cartItemEl) {
     const toggleBtn = cartItemEl.querySelector('[data-bundle-toggle]');
