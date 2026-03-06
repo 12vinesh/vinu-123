@@ -15,7 +15,6 @@
     }
   }
 
-  // Fetch full cart and group children by bundleKey
   async function getCartBundleChildren() {
     const res = await fetch('/cart.js');
     const cart = await res.json();
@@ -24,19 +23,16 @@
     cart.items.forEach(item => {
       const bundleKey = item.properties?._bundleKey;
       const isChild = item.properties?._isChild === 'true';
-      const isParent = item.properties?._isParent === 'true';
 
-      if (!bundleKey) return;
+      if (!bundleKey || !isChild) return;
 
       if (!groups[bundleKey]) groups[bundleKey] = { children: [] };
 
-      if (isChild) {
-        groups[bundleKey].children.push({
-          variantId: item.variant_id,
-          pairLabel: item.properties?._pairLabel || '',
-          title: item.title,
-        });
-      }
+      groups[bundleKey].children.push({
+        variantId: item.variant_id,
+        pairLabel: item.properties?._pairLabel || '',
+        title: item.title,
+      });
     });
 
     return groups;
@@ -58,23 +54,22 @@
 
       if (!pairsList) continue;
 
-      // Clear existing items
+      // Clear and rebuild
       pairsList.innerHTML = '';
 
-      // Update toggle button text
       if (toggleBtn) {
         toggleBtn.textContent = `Hide ${children.length} items ▲`;
         toggleBtn.setAttribute('aria-expanded', 'true');
       }
 
-      // Fetch all variants in parallel
+      // Fetch all variant images in parallel
       const variants = await Promise.all(
         children.map(child => fetchVariant(child.variantId))
       );
 
-      // Render each child
       children.forEach((child, index) => {
         const variant = variants[index];
+
         const li = document.createElement('li');
         li.className = 'bundle-pair-item';
 
@@ -116,7 +111,6 @@
         pairsList.appendChild(li);
       });
 
-      // Init toggle
       initToggle(parentEl);
     }
   }
@@ -126,7 +120,6 @@
     const pairsList = cartItemEl.querySelector('[data-bundle-pairs-list]');
     if (!toggleBtn || !pairsList) return;
 
-    // Remove old listener
     const newBtn = toggleBtn.cloneNode(true);
     toggleBtn.parentNode.replaceChild(newBtn, toggleBtn);
 
@@ -152,7 +145,6 @@
 
   document.addEventListener('DOMContentLoaded', init);
 
-  // Re-run when cart drawer updates
   const observer = new MutationObserver(() => {
     hydrateBundleItems();
   });
