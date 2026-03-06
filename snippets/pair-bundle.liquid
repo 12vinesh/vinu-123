@@ -559,9 +559,10 @@
   /** ----------------------------------------------------------
    * SECTION 8: Page Load Initialization
    * ---------------------------------------------------------- */
-  checkInventory();
-  updatePropertiesInForm();
-  document.addEventListener(
+ checkInventory();
+updatePropertiesInForm();
+
+document.addEventListener(
   "submit",
   function (e) {
     const form = e.target.closest('form[action*="/cart/add"]');
@@ -569,26 +570,99 @@
 
     if (typeof collectLineItemProperties !== "function") return;
 
+    // Collect the properties you already use (_bundlePairIds, _bundlePairLabels, etc.)
     const properties = collectLineItemProperties();
     if (!properties || Object.keys(properties).length === 0) return;
 
-    // Remove existing properties
-    form.querySelectorAll('input[name^="properties["]').forEach(el => el.remove());
+    // IMPORTANT: prevent the normal form submit
+    e.preventDefault();
 
-    // Inject new properties BEFORE Dawn reads FormData
-    Object.entries(properties).forEach(([key, value]) => {
-      if (!value) return;
+    // 1. Get the parent (bundle) variant ID from the form
+    const bundleVariantInput = form.querySelector('[name="id"]');
+    if (!bundleVariantInput) {
+      console.error('Bundle variant input [name="id"] not found');
+      return;
+    }
+    const bundleVariantId = Number(bundleVariantInput.value);
 
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = `properties[${key}]`;
-      input.value = value;
-      form.appendChild(input);
+    // 2. Extract pair IDs and labels from properties
+    const rawIds = properties._bundlePairIds || properties._bundlePairIDs || "";
+    const rawLabels = properties._bundlePairLabels || "";
+
+    const variantIds = rawIds
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const pairLabels = rawLabels
+      ? rawLabels.split(",").map((s) => s.trim())
+      : variantIds.map((_, i) => `Pair ${i + 1}`);
+
+    if (variantIds.length === 0) {
+      console.error("No _bundlePairIds found in properties");
+      return;
+    }
+
+    // 3. Create a unique key to tie parent + children together
+    const bundleKey = `bundle-${Date.now()}`;
+
+    // 4. Build items array for /cart/add.js
+
+  
+    const items = [];
+
+    // 4a. Parent line: the bundle product itself
+    items.push({
+      id: bundleVariantId,
+      quantity: 1,
+      properties: {
+        _bundleKey: bundleKey,
+        _isParent: "true",
+        // You can keep other top-level properties if you want:
+        // _bundleName: properties._bundleName || '',
+      },
     });
+
+    // 4b. Child lines: one per selected pair variant
+    variantIds.forEach((variantId, index) => {
+      const numericId = Number(variantId);
+      const label = pairLabels[index] || `Pair ${index + 1}`;
+
+      items.push({
+        id: numericId,
+        quantity: 1,
+        properties: {
+          _bundleKey: bundleKey,
+          _isChild: "true",
+          _pairLabel: label,
+        },
+      });
+    });
+
+    // 5. Send to Shopify Ajax cart endpoint
+    fetch("/cart/add.js", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ items }),
+    })
+      .then((res) => res.json())
+      .then((cart) => {
+        // 6. Optionally trigger your cart drawer refresh here
+        // Example (depends on how your theme works):
+        // document.dispatchEvent(new CustomEvent('cart:refresh', { detail: cart }));
+
+        // If your theme normally reloads on add-to-cart, you could also:
+        // window.location.reload();
+      })
+      .catch((error) => {
+        console.error("Error adding bundle items to cart", error);
+      });
   },
-  true // 🔥 VERY IMPORTANT (capture phase)
+  true // capture phase, keep this as you had it
 );
-});
 
 </script>
 {% endif %}
