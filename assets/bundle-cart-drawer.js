@@ -40,10 +40,15 @@
       if (!bundleKey || !isChild) return;
       if (!groups[bundleKey]) groups[bundleKey] = { children: [] };
       groups[bundleKey].children.push({
-        variantId: item.variant_id,
-        pairLabel: item.properties?._pairLabel || '',
-        title: item.title,
-      });
+  variantId: item.variant_id,
+  pairLabel: item.properties?._pairLabel || '',
+  title: item.title,
+  sortIndex: item.properties?._pairLabel
+    ? ['1st pair', '2nd pair', '3rd pair', '4th pair', 'Free pair'].indexOf(
+        item.properties._pairLabel.toLowerCase()
+      )
+    : 99,
+});
     });
 
     return groups;
