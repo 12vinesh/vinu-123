@@ -336,13 +336,30 @@
       addToCartButton.style.cursor = isAvailable ? "pointer" : "not-allowed";
     }
   }
+/** ----------------------------------------------------------
+ * SECTION 4: Dynamic Color & Size Filtering Logic
+ * ---------------------------------------------------------- */
 
-  /** ----------------------------------------------------------
-   * SECTION 4: Dynamic Color & Size Filtering Logic
-   * ---------------------------------------------------------- */
+// Build variant map from liquid data
+// Format: { "White|S - US6 - 9.5": { variantId, inventory } }
+const variantMap = {};
 
-  // Filter colors when a size is selected
- function filterColorsBySelectedSize(variantBlock) {
+{% for metaobject in product.metafields.custom.product_variants.value %}
+  {% for variant in metaobject.selected_color.value %}
+    {%- assign vColour = variant.title | split: ' / ' | last | strip -%}
+    {%- assign vSize = variant.title | split: ' / ' | first | strip -%}
+    variantMap["{{ vColour }}|{{ vSize }}"] = {
+      variantId: "{{ variant.id }}",
+      inventory: {{ variant.inventory_quantity }},
+    };
+  {% endfor %}
+{% endfor %}
+
+function getVariantForColourSize(colour, size) {
+  return variantMap[`${colour}|${size}`] || null;
+}
+
+function filterColorsBySelectedSize(variantBlock) {
   const sizeGroup = variantBlock.querySelector(".selected_size");
   const colorGroup = variantBlock.querySelector(".selected_color");
 
@@ -352,40 +369,73 @@
   if (!selectedSize) return;
 
   const colorOptions = colorGroup.querySelectorAll(".color_value");
+  const currentSelectedColor = colorGroup.querySelector(".selected-value");
+  const currentColorName = currentSelectedColor?.getAttribute("color-property");
 
   colorOptions.forEach((colorOption) => {
     const colorName = colorOption.getAttribute("color-property");
+    const variant = getVariantForColourSize(colorName, selectedSize);
 
-    // Check if a variant exists for this colour + selected size combo
-    // by looking for a variant whose title contains both
-    const variantId = colorOption.getAttribute("data-variant-id");
-
-    // Fetch variant availability check via hidden img alt tags
-    // We match by checking all variants in the metaobject
-    // For now show all colours when size changes
-    colorOption.classList.remove("hidden");
+    if (!variant) {
+      colorOption.classList.add("hidden");
+    } else {
+      colorOption.classList.remove("hidden");
+      // Update variant ID to match this size
+      colorOption.setAttribute("data-variant-id", variant.variantId);
+      // Update inventory
+      const place = colorOption.querySelector(".selected-value-place");
+      if (place) place.setAttribute("inventory-qty", variant.inventory);
+      colorOption.classList.toggle("outStock", variant.inventory <= 0);
+    }
   });
+
+  // If current selected colour is hidden, pick first available
+  if (currentSelectedColor?.classList.contains("hidden")) {
+    currentSelectedColor.classList.remove("selected-value");
+    const firstAvailable = colorGroup.querySelector(
+      ".color_value:not(.hidden):not(.outStock)"
+    );
+    if (firstAvailable) {
+      firstAvailable.classList.add("selected-value");
+    }
+  }
 }
 
-  // Update size inventory based on selected color
-  function updateSizeInventoryFromColor(variantBlock) {
-    const colorGroup = variantBlock.querySelector(".selected_color");
-    const sizeGroup = variantBlock.querySelector(".selected_size");
+function updateSizeInventoryFromColor(variantBlock) {
+  const colorGroup = variantBlock.querySelector(".selected_color");
+  const sizeGroup = variantBlock.querySelector(".selected_size");
 
-    const selectedColorEl = colorGroup.querySelector(".selected-value .selected-value-place");
-    const colorInventory = selectedColorEl ? parseInt(selectedColorEl.getAttribute("inventory-qty")) || 0 : 0;
-    const selectedColorValue = colorGroup.querySelector(".selected-value")?.getAttribute("available-color");
+  const selectedColorEl = colorGroup.querySelector(".selected-value");
+  const selectedColor = selectedColorEl?.getAttribute("color-property");
 
-    sizeGroup.querySelectorAll(".size_value").forEach((sizeOption) => {
-      const sizeValue = sizeOption.getAttribute("available-size");
-      const isMatch = selectedColorValue && sizeValue === selectedColorValue;
+  if (!selectedColor) return;
 
-      if (isMatch) {
-        sizeOption.setAttribute("inventory-qty-size", colorInventory);
-        sizeOption.classList.toggle("outStock", colorInventory <= 0);
-      }
-    });
+  sizeGroup.querySelectorAll(".size_value").forEach((sizeOption) => {
+    const sizeValue = sizeOption.getAttribute("available-size");
+    const variant = getVariantForColourSize(selectedColor, sizeValue);
+
+    if (!variant) {
+      sizeOption.classList.add("outStock");
+      sizeOption.setAttribute("inventory-qty-size", "0");
+    } else {
+      sizeOption.classList.toggle("outStock", variant.inventory <= 0);
+      sizeOption.setAttribute("inventory-qty-size", variant.inventory);
+      // Update data-variant-id on colour swatch for this size
+    }
+  });
+
+  // Update selected colour's variant ID based on selected size
+  const selectedSizeEl = sizeGroup.querySelector(".selected-value");
+  const selectedSize = selectedSizeEl?.getAttribute("available-size");
+  if (selectedSize && selectedColor) {
+    const variant = getVariantForColourSize(selectedColor, selectedSize);
+    if (variant && selectedColorEl) {
+      selectedColorEl.setAttribute("data-variant-id", variant.variantId);
+      const place = selectedColorEl.querySelector(".selected-value-place");
+      if (place) place.setAttribute("inventory-qty", variant.inventory);
+    }
   }
+}
 
   /** ----------------------------------------------------------
    * SECTION 5: Line Item Property Collection
