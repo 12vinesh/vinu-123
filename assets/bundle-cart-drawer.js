@@ -163,12 +163,7 @@
     });
   }
 
-  function debouncedHydrate() {
-    clearTimeout(hydrateTimer);
-    hydrateTimer = setTimeout(() => {
-      hydrateBundleItems();
-    }, 300);
-  }
+  
   function handleBundleRemove() {
   document.addEventListener('click', async (e) => {
     const removeBtn = e.target.closest('cart-remove-button[data-bundle-key]');
