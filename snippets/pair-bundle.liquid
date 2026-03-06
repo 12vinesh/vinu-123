@@ -646,21 +646,34 @@ document.addEventListener(
       },
       body: JSON.stringify({ items }),
     })
-      .then((res) => res.json())
-      .then((cart) => {
-        // 6. Optionally trigger your cart drawer refresh here
-        // Example (depends on how your theme works):
-        // document.dispatchEvent(new CustomEvent('cart:refresh', { detail: cart }));
+  .then((res) => res.json())
+    .then((data) => {
+        if (data.status === 422 || data.description) {
+          console.error("Cart error:", data.description);
+          return;
+        }
 
-        // If your theme normally reloads on add-to-cart, you could also:
-        // window.location.reload();
+        // Refresh the cart drawer
+        fetch('/cart.js')
+          .then(r => r.json())
+          .then(cartData => {
+            document.dispatchEvent(new CustomEvent('cart:refresh', { bubbles: true }));
+            document.dispatchEvent(new CustomEvent('cart-update', { bubbles: true }));
+
+            // Dawn theme specific — updates the cart drawer
+            const cartDrawer = document.querySelector('cart-drawer');
+            if (cartDrawer && typeof cartDrawer.renderContents === 'function') {
+              cartDrawer.renderContents({ detail: cartData });
+            }
+
+            // Fallback: open the drawer if it exists
+            if (cartDrawer && typeof cartDrawer.open === 'function') {
+              cartDrawer.open();
+            }
+          });
       })
       .catch((error) => {
         console.error("Error adding bundle items to cart", error);
       });
-  },
-  true // capture phase, keep this as you had it
-);
-
 </script>
 {% endif %}
