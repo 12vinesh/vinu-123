@@ -114,21 +114,7 @@
       initToggle(parentEl);
     }
   }
-  // Preload images as soon as page loads
-async function preloadAllBundleImages() {
-  const res = await fetch('/cart.js');
-  const cart = await res.json();
-  
-  cart.items.forEach(item => {
-    const isChild = item.properties?._isChild === 'true';
-    if (isChild) fetchVariant(item.variant_id); // preload into cache
-  });
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  preloadAllBundleImages();
-  init();
-});
+ 
 
   function initToggle(cartItemEl) {
     const toggleBtn = cartItemEl.querySelector('[data-bundle-toggle]');
@@ -154,11 +140,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function init() {
-    hydrateBundleItems();
+  async function preloadAllBundleImages() {
+    try {
+      const res = await fetch('/cart.js');
+      const cart = await res.json();
+      cart.items.forEach(item => {
+        if (item.properties?._isChild === 'true') {
+          fetchVariant(item.variant_id);
+        }
+      });
+    } catch(e) {}
   }
 
-  document.addEventListener('DOMContentLoaded', init);
+  // Single DOMContentLoaded
+  document.addEventListener('DOMContentLoaded', () => {
+    preloadAllBundleImages();
+    hydrateBundleItems();
+  });
 
   const observer = new MutationObserver(() => {
     hydrateBundleItems();
