@@ -202,8 +202,7 @@
   {%- assign colorCode = selected_color.featured_image.alt -%}
   {%- assign Colortext = selected_color.title | split: ' / ' | last -%}
   {%- assign maincolor = Colortext | split: ' / ' | last -%}
-  {%- assign color_key = Colortext | downcase | strip -%}
-
+ {%- assign color_key = selected_color.title | split: ' / ' | last | downcase | strip -%}
   {%- unless shown_colors contains color_key -%}
     {%- assign shown_colors = shown_colors | append: color_key | append: '|' -%}
 
