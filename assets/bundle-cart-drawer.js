@@ -164,7 +164,7 @@
   }
 
   
-  function handleBundleRemove() {
+ function handleBundleRemove() {
   document.addEventListener('click', async (e) => {
     const removeBtn = e.target.closest('cart-remove-button[data-bundle-key]');
     if (!removeBtn) return;
@@ -175,19 +175,20 @@
     e.preventDefault();
     e.stopImmediatePropagation();
 
-    // Get all cart items
     const res = await fetch('/cart.js');
     const cart = await res.json();
 
-    // Find all lines with this bundleKey
+    // Build array of variant IDs to set to 0
     const updates = {};
-    cart.items.forEach((item, index) => {
+    cart.items.forEach(item => {
       if (item.properties?._bundleKey === bundleKey) {
-        updates[index + 1] = 0; // set quantity to 0
+        // Use variant id as key — set quantity to 0
+        updates[item.key] = 0;
       }
     });
 
-    // Remove all at once
+    console.log('Removing bundle lines:', updates);
+
     await fetch('/cart/update.js', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
