@@ -561,121 +561,34 @@
    * ---------------------------------------------------------- */
   checkInventory();
   updatePropertiesInForm();
- document.addEventListener(
+  document.addEventListener(
   "submit",
-  async function (e) {
+  function (e) {
     const form = e.target.closest('form[action*="/cart/add"]');
     if (!form) return;
 
-    const wrapperPairs = document.querySelectorAll(".wrapper_pair");
-    if (!wrapperPairs.length) return;
+    if (typeof collectLineItemProperties !== "function") return;
 
-    // Prevent default form submission
-    e.preventDefault();
-    e.stopImmediatePropagation();
+    const properties = collectLineItemProperties();
+    if (!properties || Object.keys(properties).length === 0) return;
 
-    const submitBtn = form.querySelector('[type="submit"]');
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Adding...';
-    }
+    // Remove existing properties
+    form.querySelectorAll('input[name^="properties["]').forEach(el => el.remove());
 
-    try {
-      const properties = collectLineItemProperties();
+    // Inject new properties BEFORE Dawn reads FormData
+    Object.entries(properties).forEach(([key, value]) => {
+      if (!value) return;
 
-      // Get bundle parent variant ID from form
-      const variantInput = form.querySelector('[name="id"]');
-      const bundleVariantId = variantInput?.value;
-      if (!bundleVariantId) throw new Error('No bundle variant ID found');
-
-      // Generate unique bundle key
-      const bundleKey = `bundle-${Date.now()}`;
-
-      // Build items array
-      const items = [];
-
-      // Visible properties only (no underscore) for parent line
-      const visibleProperties = {};
-      Object.entries(properties).forEach(([k, v]) => {
-        if (!k.startsWith('_')) visibleProperties[k] = v;
-      });
-
-      // Add bundle parent as first line
-      items.push({
-        id: parseInt(bundleVariantId),
-        quantity: 1,
-        properties: {
-          ...visibleProperties,
-          '_bundleKey': bundleKey,
-          '_isParent': 'true',
-        }
-      });
-
-      // Add each pair variant as separate line
-      const variantIds = properties['_bundlePairIds']?.split(',').filter(Boolean) || [];
-      const pairLabels = properties['_bundlePairLabels']?.split(',') || [];
-
-      variantIds.forEach((variantId, index) => {
-        items.push({
-          id: parseInt(variantId),
-          quantity: 1,
-          properties: {
-            '_bundleKey': bundleKey,
-            '_isChild': 'true',
-            '_pairLabel': pairLabels[index] || `Pair ${index + 1}`,
-          }
-        });
-      });
-
-      console.log('Adding bundle items:', JSON.stringify(items, null, 2));
-
-      // Add all items at once
-      const response = await fetch('/cart/add.js', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items }),
-      });
-
-      const result = await response.json();
-      console.log('Cart add result:', result);
-
-      if (result.status) {
-        throw new Error(result.description || 'Error adding to cart');
-      }
-
-      // Refresh and open cart drawer
-      const cartDrawerEl = document.querySelector('cart-drawer');
-      fetch(window.location.pathname + '?section_id=cart-drawer')
-        .then(r => r.text())
-        .then(html => {
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(html, 'text/html');
-
-          const newDrawer = doc.querySelector('#CartDrawer');
-          const oldDrawer = document.querySelector('#CartDrawer');
-          if (newDrawer && oldDrawer) oldDrawer.innerHTML = newDrawer.innerHTML;
-
-          const newCount = doc.querySelector('.cart-count-bubble');
-          const oldCount = document.querySelector('.cart-count-bubble');
-          if (newCount && oldCount) oldCount.innerHTML = newCount.innerHTML;
-
-          if (cartDrawerEl) {
-            cartDrawerEl.classList.remove('is-empty');
-            if (typeof cartDrawerEl.open === 'function') cartDrawerEl.open();
-          }
-        });
-
-    } catch (err) {
-      console.error('Bundle add error:', err);
-    } finally {
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Add to cart';
-      }
-    }
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = `properties[${key}]`;
+      input.value = value;
+      form.appendChild(input);
+    });
   },
-  true
+  true // 🔥 VERY IMPORTANT (capture phase)
 );
+});
 
 </script>
 {% endif %}
