@@ -50,6 +50,11 @@
     : 99,
 });
     });
+    // Sort children by pair order
+Object.keys(groups).forEach(key => {
+  groups[key].children.sort((a, b) => a.sortIndex - b.sortIndex);
+});
+
 
     return groups;
   }
