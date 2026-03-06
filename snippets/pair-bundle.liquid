@@ -342,21 +342,37 @@
 
 // Build variant map from liquid data
 // Format: { "White|S - US6 - 9.5": { variantId, inventory } }
+// Build variant map from DOM instead of Liquid
 const variantMap = {};
 
-{% for metaobject in product.metafields.custom.product_variants.value %}
-  {% for variant in metaobject.selected_color.value %}
-    {%- assign vColour = variant.title | split: ' / ' | last | strip -%}
-    {%- assign vSize = variant.title | split: ' / ' | first | strip -%}
-    variantMap["{{ vColour }}|{{ vSize }}"] = {
-      variantId: "{{ variant.id }}",
-      inventory: {{ variant.inventory_quantity }},
-    };
-  {% endfor %}
-{% endfor %}
+document.querySelectorAll('.wrapper_pair').forEach((block, pairIndex) => {
+  // For each pair, we need to know which variantId corresponds to colour+size
+  // We read this from the colour swatches data attributes
+});
 
-function getVariantForColourSize(colour, size) {
-  return variantMap[`${colour}|${size}`] || null;
+// Better approach — store all variants via Liquid inline
+const allVariantData = [
+  {% for metaobject in product.metafields.custom.product_variants.value %}
+    {% for variant in metaobject.selected_color.value %}
+      {
+        pairIndex: {{ forloop.parentloop.index0 }},
+        variantId: "{{ variant.id }}",
+        colour: "{{ variant.title | split: ' / ' | last | strip }}",
+        size: "{{ variant.title | split: ' / ' | first | strip }}",
+        inventory: {{ variant.inventory_quantity }},
+      },
+    {% endfor %}
+  {% endfor %}
+];
+
+// Build lookup map
+allVariantData.forEach(v => {
+  const key = `${v.pairIndex}|${v.colour}|${v.size}`;
+  variantMap[key] = v;
+});
+
+function getVariantForColourSize(pairIndex, colour, size) {
+  return variantMap[`${pairIndex}|${colour}|${size}`] || null;
 }
 
 function filterColorsBySelectedSize(variantBlock) {
