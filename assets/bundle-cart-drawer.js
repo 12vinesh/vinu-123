@@ -218,6 +218,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     preloadAllBundleImages();
     hydrateBundleItems();
+    handleBundleRemove();
   });
 
   // Debounced observer — prevents multiple rapid fires
