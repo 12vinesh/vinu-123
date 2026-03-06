@@ -1,31 +1,123 @@
 (function () {
   'use strict';
 
-  async function hydrateBundlePairs(cartItemEl) {
-    const pairItems = cartItemEl.querySelectorAll('.bundle-pair-item[data-variant-id]');
+  const variantCache = {};
 
-    for (const pairItem of pairItems) {
-      const variantId = pairItem.dataset.variantId;
-      if (!variantId) continue;
+  async function fetchVariant(variantId) {
+    if (variantCache[variantId]) return variantCache[variantId];
+    try {
+      const res = await fetch(`/variants/${variantId}.js`);
+      const data = await res.json();
+      variantCache[variantId] = data;
+      return data;
+    } catch (e) {
+      return null;
+    }
+  }
 
-      try {
-        const response = await fetch(`/variants/${variantId}.js`);
-        const variant = await response.json();
+  // Fetch full cart and group children by bundleKey
+  async function getCartBundleChildren() {
+    const res = await fetch('/cart.js');
+    const cart = await res.json();
+    const groups = {};
 
-        const imgWrap = pairItem.querySelector('[data-pair-img-wrap]');
-        if (imgWrap && variant.featured_image?.src) {
+    cart.items.forEach(item => {
+      const bundleKey = item.properties?._bundleKey;
+      const isChild = item.properties?._isChild === 'true';
+      const isParent = item.properties?._isParent === 'true';
+
+      if (!bundleKey) return;
+
+      if (!groups[bundleKey]) groups[bundleKey] = { children: [] };
+
+      if (isChild) {
+        groups[bundleKey].children.push({
+          variantId: item.variant_id,
+          pairLabel: item.properties?._pairLabel || '',
+          title: item.title,
+        });
+      }
+    });
+
+    return groups;
+  }
+
+  async function hydrateBundleItems() {
+    const bundleParents = document.querySelectorAll('.cart-item--bundle');
+    if (!bundleParents.length) return;
+
+    const groups = await getCartBundleChildren();
+
+    for (const parentEl of bundleParents) {
+      const bundleKey = parentEl.dataset.bundleKey;
+      if (!bundleKey) continue;
+
+      const children = groups[bundleKey]?.children || [];
+      const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
+      const toggleBtn = parentEl.querySelector('[data-bundle-toggle]');
+
+      if (!pairsList) continue;
+
+      // Clear existing items
+      pairsList.innerHTML = '';
+
+      // Update toggle button text
+      if (toggleBtn) {
+        toggleBtn.textContent = `Hide ${children.length} items ▲`;
+        toggleBtn.setAttribute('aria-expanded', 'true');
+      }
+
+      // Fetch all variants in parallel
+      const variants = await Promise.all(
+        children.map(child => fetchVariant(child.variantId))
+      );
+
+      // Render each child
+      children.forEach((child, index) => {
+        const variant = variants[index];
+        const li = document.createElement('li');
+        li.className = 'bundle-pair-item';
+
+        const inner = document.createElement('div');
+        inner.className = 'bundle-pair-item__inner';
+
+        // Image
+        const imgWrap = document.createElement('div');
+        imgWrap.className = 'bundle-pair-item__img-wrap';
+
+        if (variant?.featured_image?.src) {
           const img = document.createElement('img');
           img.src = variant.featured_image.src;
           img.alt = variant.title || '';
           img.width = 40;
           img.height = 40;
-          img.loading = 'lazy';
+          img.loading = 'eager';
           img.className = 'bundle-pair-item__img';
           imgWrap.appendChild(img);
         }
-      } catch (err) {
-        console.error('Failed to fetch variant', variantId, err);
-      }
+
+        // Info
+        const info = document.createElement('div');
+        info.className = 'bundle-pair-item__info';
+
+        const label = document.createElement('span');
+        label.className = 'bundle-pair-item__label';
+        label.textContent = `${child.pairLabel}:`;
+
+        const value = document.createElement('span');
+        value.className = 'bundle-pair-item__value';
+        value.textContent = ` ${variant?.title || child.title}`;
+
+        info.appendChild(label);
+        info.appendChild(value);
+        inner.appendChild(imgWrap);
+        inner.appendChild(info);
+        li.appendChild(inner);
+        pairsList.appendChild(li);
+      });
+
+      // Init toggle
+      initToggle(parentEl);
     }
   }
 
@@ -34,47 +126,35 @@
     const pairsList = cartItemEl.querySelector('[data-bundle-pairs-list]');
     if (!toggleBtn || !pairsList) return;
 
-    toggleBtn.addEventListener('click', () => {
-      const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+    // Remove old listener
+    const newBtn = toggleBtn.cloneNode(true);
+    toggleBtn.parentNode.replaceChild(newBtn, toggleBtn);
+
+    newBtn.addEventListener('click', () => {
+      const isExpanded = newBtn.getAttribute('aria-expanded') === 'true';
       const pairCount = pairsList.querySelectorAll('.bundle-pair-item').length;
 
       if (isExpanded) {
         pairsList.style.display = 'none';
-        toggleBtn.textContent = `Show ${pairCount} items ▼`;
-        toggleBtn.setAttribute('aria-expanded', 'false');
+        newBtn.textContent = `Show ${pairCount} items ▼`;
+        newBtn.setAttribute('aria-expanded', 'false');
       } else {
         pairsList.style.display = '';
-        toggleBtn.textContent = `Hide ${pairCount} items ▲`;
-        toggleBtn.setAttribute('aria-expanded', 'true');
+        newBtn.textContent = `Hide ${pairCount} items ▲`;
+        newBtn.setAttribute('aria-expanded', 'true');
       }
     });
   }
 
-  function initBundleCartItems() {
-    const bundleItems = document.querySelectorAll('.cart-item--bundle');
-    bundleItems.forEach((item) => {
-      hydrateBundlePairs(item);
-      initToggle(item);
-    });
+  function init() {
+    hydrateBundleItems();
   }
 
-  document.addEventListener('DOMContentLoaded', initBundleCartItems);
+  document.addEventListener('DOMContentLoaded', init);
 
-  // Re-run when Dawn updates cart drawer
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      for (const node of mutation.addedNodes) {
-        if (node.nodeType !== 1) continue;
-        if (node.classList?.contains('cart-item--bundle')) {
-          hydrateBundlePairs(node);
-          initToggle(node);
-        }
-        node.querySelectorAll?.('.cart-item--bundle')?.forEach((item) => {
-          hydrateBundlePairs(item);
-          initToggle(item);
-        });
-      }
-    }
+  // Re-run when cart drawer updates
+  const observer = new MutationObserver(() => {
+    hydrateBundleItems();
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
