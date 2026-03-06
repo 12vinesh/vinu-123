@@ -195,29 +195,49 @@
        <div class="swatch-names">COLOUR: <span class="swatch-color"></span> </div>
       
       <div class="selected_color">
-      {% for selected_color in metaobject.selected_color.value %}
-        {% assign inventoryQty = selected_color.inventory_quantity %}
-          {% assign colorCode = selected_color.featured_image.alt %}
-          {% assign Colortext = selected_color.title | split: " / " | last  %}
-        {% assign maincolor = Colortext | split: " / " | last %}
-        <div class="{% if forloop.first %} selected-value {% endif %} color_value {% if inventoryQty <= 0 %} outStock {% endif %}" data-variant-id={{ selected_color.id }} color-property="{{ selected_color.title | split: " / " | last }}" available-color="{{ selected_color.title | split: ' ' | first }}">
-            <span style="{% if Colortext == 'All White' %}
-            background: linear-gradient(135deg, #f0f0f0  0%, #f0f0f0  50%, #ffffff 50%, #ffffff 100%);
-          {% else %}
-            background-color: {{ colorCode }};
-          {% endif %}" id="selected-value-place" class="selected-value-place" data-value="{{ product.id }}" inventory-qty="{{ inventoryQty }}">
-             <i class="fa fa-check fa-check-color" aria-hidden="true"></i>
-              <span class="color_title" style="{% if Colortext == 'All White' %}
-            color: transparent;
-          {% else %}
-            color: {{ colorCode }};
-          {% endif %}">{{ maincolor }}</span>
-            
-          <img class="image_featured" src="{{ selected_color.featured_image | img_url: 'master' }}" style="display: none;">
-              
-            </span>
-            </div>
-        {% endfor %}
+      {%- assign shown_colors = '' -%}
+{%- assign first_shown = false -%}
+{%- for selected_color in metaobject.selected_color.value -%}
+  {%- assign inventoryQty = selected_color.inventory_quantity -%}
+  {%- assign colorCode = selected_color.featured_image.alt -%}
+  {%- assign Colortext = selected_color.title | split: ' / ' | last -%}
+  {%- assign maincolor = Colortext | split: ' / ' | last -%}
+  {%- assign color_key = Colortext | downcase | strip -%}
+
+  {%- unless shown_colors contains color_key -%}
+    {%- assign shown_colors = shown_colors | append: color_key | append: '|' -%}
+
+    <div class="color_value {% unless first_shown %}selected-value{% endunless %} {% if inventoryQty <= 0 %}outStock{% endif %}"
+      data-variant-id="{{ selected_color.id }}"
+      color-property="{{ Colortext }}"
+      available-color="{{ selected_color.title | split: ' ' | first }}">
+
+      <span style="{% if Colortext == 'All White' %}
+          background: linear-gradient(135deg, #f0f0f0 0%, #f0f0f0 50%, #ffffff 50%, #ffffff 100%);
+        {% else %}
+          background-color: {{ colorCode }};
+        {% endif %}"
+        id="selected-value-place"
+        class="selected-value-place"
+        data-value="{{ product.id }}"
+        inventory-qty="{{ inventoryQty }}">
+
+        <i class="fa fa-check fa-check-color" aria-hidden="true"></i>
+
+        <span class="color_title" style="{% if Colortext == 'All White' %}color: transparent;{% else %}color: {{ colorCode }};{% endif %}">
+          {{ maincolor }}
+        </span>
+
+        <img class="image_featured"
+          src="{{ selected_color.featured_image | img_url: 'master' }}"
+          style="display: none;">
+
+      </span>
+    </div>
+
+    {%- assign first_shown = true -%}
+  {%- endunless -%}
+{%- endfor -%}
       </div>
     {% comment %} end color swatch {% endcomment %}
 
