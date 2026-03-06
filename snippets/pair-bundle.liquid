@@ -210,7 +210,7 @@
     <div class="color_value {% unless first_shown %}selected-value{% endunless %} {% if inventoryQty <= 0 %}outStock{% endif %}"
       data-variant-id="{{ selected_color.id }}"
       color-property="{{ Colortext }}"
-     available-color="{{ selected_color.title | split: ' / ' | first | strip }}">
+     available-color="{{ selected_color.title | split: ' / ' | last | strip }}">
 
       <span style="{% if Colortext == 'All White' %}
           background: linear-gradient(135deg, #f0f0f0 0%, #f0f0f0 50%, #ffffff 50%, #ffffff 100%);
