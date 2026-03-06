@@ -214,6 +214,12 @@
       });
   }, true);
 }
+function debouncedHydrate() {
+    clearTimeout(hydrateTimer);
+    hydrateTimer = setTimeout(() => {
+      hydrateBundleItems();
+    }, 300);
+  }
 
   document.addEventListener('DOMContentLoaded', () => {
     preloadAllBundleImages();
