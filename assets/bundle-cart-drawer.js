@@ -180,13 +180,3 @@
   observer.observe(document.body, { childList: true, subtree: true });
 
 })();
-```
-
----
-
-## Key Fixes
-```
-1. isHydrating flag    → prevents concurrent runs
-2. alreadyDone check   → skips if pairs already rendered
-3. per-parent check    → skips individual parents already hydrated
-4. debouncedHydrate    → waits 300ms before running after DOM changes
