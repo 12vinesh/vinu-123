@@ -100,3 +100,6 @@
   font-size: 12px;
 }
 .hidden { display: none !important; }
+.bundle-child-list {
+  transition: all 0.3s ease;
+}
