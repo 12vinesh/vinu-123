@@ -648,6 +648,29 @@ function buildBundleItems(productForm, variantIds) {
   return items;
 
 }
+async function addBundleToCart(items) {
+
+  const response = await fetch('/cart/add.js', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ items })
+  });
+
+  if (!response.ok) {
+    throw new Error("Cart add failed");
+  }
+
+  const data = await response.json();
+
+  document.dispatchEvent(
+    new CustomEvent("cart:refresh", { bubbles: true })
+  );
+
+  return data;
+
+}
 
 }); // end DOMContentLoaded
 </script>
