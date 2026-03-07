@@ -177,18 +177,7 @@
     </tr>
   {% endfor %}
     </tbody>
-    <tr>
-  <td colspan="4">
-    {% for item in cart.items %}
-      {% if item.properties._isParent == 'true' %}
-        <div>DEBUG: parent item found - key: {{ item.properties._bundleKey }}</div>
-        <button onclick="alert('clicked: {{ item.properties._bundleKey }}')" style="background:red; color:white; padding:10px;">
-          TEST REMOVE {{ item.product.title }}
-        </button>
-      {% endif %}
-    {% endfor %}
-  </td>
-</tr>
+   
                 </table>
               </div>
             {%- endif -%}
