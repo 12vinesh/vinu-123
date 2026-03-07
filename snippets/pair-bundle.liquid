@@ -642,8 +642,9 @@ document.addEventListener("submit", async function (e) {
       console.error('Bundle add error:', err);
       alert('Error: ' + err.message);
     } finally {
-      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Add to cart'; }
-    }
+  isSubmitting = false;
+  if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Add to cart'; }
+}
   }, true);
 
 }); // end DOMContentLoaded
