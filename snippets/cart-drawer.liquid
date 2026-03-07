@@ -117,7 +117,7 @@
                     </tr>
                   </thead>
 
-           <tbody role="rowgroup">
+<tbody role="rowgroup">
   {% for item in cart.items %}
     {% comment %} Skip child rows to keep the UI clean {% endcomment %}
     {% if item.properties._isChild == 'true' %}{% continue %}{% endif %}
@@ -163,7 +163,7 @@
       </td>
     </tr>
   {% endfor %}
-</tbody>
+    </tbody>
                 </table>
               </div>
             {%- endif -%}
