@@ -567,9 +567,9 @@ document.addEventListener("submit", async function (e) {
   if (!document.querySelectorAll(".wrapper_pair").length) return;
   if (isSubmitting) return;
   isSubmitting = true;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-
+  e.preventDefault();
+e.stopPropagation();
+e.stopImmediatePropagation();
     const submitBtn = form.querySelector('[type="submit"]');
     if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Adding...'; }
 
