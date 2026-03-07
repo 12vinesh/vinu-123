@@ -617,24 +617,24 @@ document.addEventListener("DOMContentLoaded", function () {
       if (data.status) throw new Error(data.description || 'Cart error');
 
       // Refresh cart drawer
-      fetch('/?section_id=cart-drawer')
-        .then(r => r.text())
-        .then(html => {
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(html, 'text/html');
-          const newDrawer = doc.querySelector('#CartDrawer');
-          const oldDrawer = document.querySelector('#CartDrawer');
-          if (newDrawer && oldDrawer) oldDrawer.innerHTML = newDrawer.innerHTML;
-          const newCount = doc.querySelector('.cart-count-bubble');
-          const oldCount = document.querySelector('.cart-count-bubble');
-          if (newCount && oldCount) oldCount.innerHTML = newCount.innerHTML;
-          const cartDrawerEl = document.querySelector('cart-drawer');
-          if (cartDrawerEl) {
-            cartDrawerEl.classList.remove('is-empty');
-            if (typeof cartDrawerEl.open === 'function') cartDrawerEl.open();
-          }
-        });
-
+     fetch('/?sections=cart-drawer')
+  .then(r => r.json())
+  .then(data => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(data['cart-drawer'], 'text/html');
+    const newDrawer = doc.querySelector('.drawer__inner');
+    const oldDrawer = document.querySelector('.drawer__inner');
+    if (newDrawer && oldDrawer) oldDrawer.innerHTML = newDrawer.innerHTML;
+    const newCount = doc.querySelector('.cart-count-bubble');
+    const oldCount = document.querySelector('.cart-count-bubble');
+    if (newCount && oldCount) oldCount.innerHTML = newCount.innerHTML;
+    if (!newCount && oldCount) oldCount.innerHTML = '';
+    const cartDrawerEl = document.querySelector('cart-drawer');
+    if (cartDrawerEl) {
+      cartDrawerEl.classList.remove('is-empty');
+      if (typeof cartDrawerEl.open === 'function') cartDrawerEl.open();
+    }
+  });
     } catch (err) {
       console.error('Bundle add error:', err);
       alert('Error: ' + err.message);
