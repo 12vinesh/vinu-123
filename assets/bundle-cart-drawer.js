@@ -65,9 +65,9 @@
     }
 
     // Filter parents and children
-    const parentItems = cart.items.filter(item =>
-      item.properties?._isParent === 'true' || !item.properties?._bundleKey
-    );
+   const parentItems = cart.items.filter(item =>
+  item.properties?._isChild !== 'true'
+);
     const childItems = cart.items.filter(item =>
       item.properties?._isChild === 'true'
     );
