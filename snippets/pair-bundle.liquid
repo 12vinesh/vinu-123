@@ -368,30 +368,7 @@ function updateSizeInventoryFromColor(variantBlock) {
 /** ----------------------------------------------------------
  * DOM READY
  * ---------------------------------------------------------- */
- // Wait for product-form custom element to be defined, then patch it
-customElements.whenDefined('product-form').then(() => {
-  const ProductFormClass = customElements.get('product-form');
-  if (!ProductFormClass) return;
-
-  const originalConnected = ProductFormClass.prototype.connectedCallback;
-
-  ProductFormClass.prototype.connectedCallback = function() {
-    // Check if this form has bundle pairs
-    const hasBundlePairs = () => document.querySelectorAll('.wrapper_pair').length > 0;
-
-    if (originalConnected) originalConnected.call(this);
-
-    // After Dawn sets up its handler, intercept the form submit
-    const form = this.querySelector('form');
-    if (!form) return;
-
-    form.addEventListener('submit', (e) => {
-      if (!hasBundlePairs()) return; // Let Dawn handle non-bundle products
-      e.preventDefault();
-      e.stopImmediatePropagation();
-    }, true); // capture phase beats Dawn's handler
-  };
-});
+ 
 document.addEventListener("DOMContentLoaded", function () {
 
   /** SECTION 1: Accordion */
