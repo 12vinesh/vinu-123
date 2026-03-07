@@ -607,7 +607,7 @@ document.addEventListener("submit", async function (e) {
 ];
 
       console.log('Adding items:', JSON.stringify(items, null, 2));
-
+        form.querySelectorAll('input[name^="properties["]').forEach(i => i.remove());
       const response = await fetch('/cart/add.js', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
