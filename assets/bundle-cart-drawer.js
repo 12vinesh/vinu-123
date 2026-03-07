@@ -1,266 +1,92 @@
 (function () {
   'use strict';
 
-  const variantCache = {};
-  let isHydrating = false;
-  let hydrateTimer = null;
-
-  async function fetchVariant(variantId) {
-    if (variantCache[variantId]) return variantCache[variantId];
-    try {
-      const res = await fetch(`/variants/${variantId}.js`);
-      const data = await res.json();
-      variantCache[variantId] = data;
-      return data;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  async function preloadAllBundleImages() {
-    try {
-      const res = await fetch('/cart.js');
-      const cart = await res.json();
-      cart.items.forEach(item => {
-        if (item.properties?._isChild === 'true') {
-          fetchVariant(item.variant_id);
-        }
+  // 1. Handle the "Hide/Show items" Toggle
+  // This works with the Liquid code to collapse the list of pairs
+  function initBundleToggles() {
+    document.querySelectorAll('.bundle-toggle').forEach(button => {
+      // Avoid double-binding if the drawer refreshes
+      if (button.dataset.initialized) return;
+      
+      button.addEventListener('click', (e) => {
+        const list = button.nextElementSibling;
+        const isHidden = list.classList.toggle('hidden');
+        const itemCount = list.querySelectorAll('li').length;
+        
+        button.textContent = isHidden 
+          ? `Show ${itemCount} items ▾` 
+          : `Hide items ▴`;
       });
-    } catch(e) {}
-  }
 
-  async function getCartBundleChildren() {
-    const res = await fetch('/cart.js');
-    const cart = await res.json();
-    const groups = {};
-
-    cart.items.forEach(item => {
-      const bundleKey = item.properties?._bundleKey;
-      const isChild = item.properties?._isChild === 'true';
-      if (!bundleKey || !isChild) return;
-      if (!groups[bundleKey]) groups[bundleKey] = { children: [] };
-      groups[bundleKey].children.push({
-  variantId: item.variant_id,
-  pairLabel: item.properties?._pairLabel || '',
-  title: item.title,
-  sortIndex: item.properties?._pairLabel
-    ? ['1st pair', '2nd pair', '3rd pair', '4th pair', 'Free pair'].indexOf(
-        item.properties._pairLabel.toLowerCase()
-      )
-    : 99,
-});
-    });
-    // Sort children by pair order
-Object.keys(groups).forEach(key => {
-  groups[key].children.sort((a, b) => a.sortIndex - b.sortIndex);
-});
-
-
-    return groups;
-  }
-
-  // async function hydrateBundleItems() {
-  //   // Prevent concurrent runs
-  //   if (isHydrating) return;
-
-  //   const bundleParents = document.querySelectorAll('.cart-item--bundle');
-  //   if (!bundleParents.length) return;
-
-  //   // Check if already hydrated — skip if all parents already have children rendered
-  //   const alreadyDone = Array.from(bundleParents).every(el =>
-  //     el.querySelector('.bundle-pair-item') !== null
-  //   );
-  //   if (alreadyDone) return;
-
-  //   isHydrating = true;
-
-  //   try {
-  //     const groups = await getCartBundleChildren();
-
-  //     for (const parentEl of bundleParents) {
-  //       const bundleKey = parentEl.dataset.bundleKey;
-  //       if (!bundleKey) continue;
-
-  //       // Skip if already hydrated
-  //       if (parentEl.querySelector('.bundle-pair-item')) continue;
-
-  //       const children = groups[bundleKey]?.children || [];
-  //       const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
-  //       const toggleBtn = parentEl.querySelector('[data-bundle-toggle]');
-
-  //       if (!pairsList) continue;
-
-  //       pairsList.innerHTML = '';
-
-  //       if (toggleBtn) {
-  //         toggleBtn.textContent = `Hide ${children.length} items ▲`;
-  //         toggleBtn.setAttribute('aria-expanded', 'true');
-  //       }
-
-  //       const variants = await Promise.all(
-  //         children.map(child => fetchVariant(child.variantId))
-  //       );
-
-  //       children.forEach((child, index) => {
-  //         const variant = variants[index];
-
-  //         const li = document.createElement('li');
-  //         li.className = 'bundle-pair-item';
-
-  //         const inner = document.createElement('div');
-  //         inner.className = 'bundle-pair-item__inner';
-
-  //         const imgWrap = document.createElement('div');
-  //         imgWrap.className = 'bundle-pair-item__img-wrap';
-
-  //         if (variant?.featured_image?.src) {
-  //           const img = document.createElement('img');
-  //           img.src = variant.featured_image.src;
-  //           img.alt = variant.title || '';
-  //           img.width = 40;
-  //           img.height = 40;
-  //           img.loading = 'eager';
-  //           img.className = 'bundle-pair-item__img';
-  //           imgWrap.appendChild(img);
-  //         }
-
-  //         const info = document.createElement('div');
-  //         info.className = 'bundle-pair-item__info';
-
-  //         const label = document.createElement('span');
-  //         label.className = 'bundle-pair-item__label';
-  //         label.textContent = `${child.pairLabel}:`;
-
-  //         const value = document.createElement('span');
-  //         value.className = 'bundle-pair-item__value';
-  //         value.textContent = ` ${variant?.title || child.title}`;
-
-  //         info.appendChild(label);
-  //         info.appendChild(value);
-  //         inner.appendChild(imgWrap);
-  //         inner.appendChild(info);
-  //         li.appendChild(inner);
-  //         pairsList.appendChild(li);
-  //       });
-
-  //       initToggle(parentEl);
-  //     }
-  //   } finally {
-  //     isHydrating = false;
-  //   }
-  // }
-
-  function initToggle(cartItemEl) {
-    const toggleBtn = cartItemEl.querySelector('[data-bundle-toggle]');
-    const pairsList = cartItemEl.querySelector('[data-bundle-pairs-list]');
-    if (!toggleBtn || !pairsList) return;
-
-    const newBtn = toggleBtn.cloneNode(true);
-    toggleBtn.parentNode.replaceChild(newBtn, toggleBtn);
-
-    newBtn.addEventListener('click', () => {
-      const isExpanded = newBtn.getAttribute('aria-expanded') === 'true';
-      const pairCount = pairsList.querySelectorAll('.bundle-pair-item').length;
-      if (isExpanded) {
-        pairsList.style.display = 'none';
-        newBtn.textContent = `Show ${pairCount} items ▼`;
-        newBtn.setAttribute('aria-expanded', 'false');
-      } else {
-        pairsList.style.display = '';
-        newBtn.textContent = `Hide ${pairCount} items ▲`;
-        newBtn.setAttribute('aria-expanded', 'true');
-      }
+      button.dataset.initialized = "true";
     });
   }
 
-  
- function handleBundleRemove() {
-  document.addEventListener('click', async (e) => {
-    const removeBtn = e.target.closest('cart-remove-button[data-bundle-key]');
-    if (!removeBtn) return;
+  // 2. Handle the "Remove Bundle" Logic
+  // When one item is removed, all items with the same _bundleKey are removed
+  function handleBundleRemove() {
+    document.addEventListener('click', async (e) => {
+      const removeBtn = e.target.closest('cart-remove-button[data-bundle-key]');
+      if (!removeBtn) return;
 
-    const bundleKey = removeBtn.dataset.bundleKey;
-    if (!bundleKey) return;
+      const bundleKey = removeBtn.dataset.bundleKey;
+      if (!bundleKey || bundleKey === "") return; // Fallback for normal items
 
-    e.preventDefault();
-    e.stopImmediatePropagation();
+      e.preventDefault();
+      e.stopImmediatePropagation();
 
-    try {
-      // Get current cart
-      const res = await fetch('/cart.js');
-      const cart = await res.json();
+      try {
+        // Fetch current cart state
+        const res = await fetch('/cart.js');
+        const cart = await res.json();
 
-      // Build updates object — remove all bundle lines at once
-      const updates = {};
-      cart.items.forEach(item => {
-        if (item.properties?._bundleKey === bundleKey) {
-          updates[item.key] = 0;
+        // Identify all items belonging to this specific bundle
+        const updates = {};
+        cart.items.forEach(item => {
+          if (item.properties && item.properties._bundleKey === bundleKey) {
+            updates[item.key] = 0;
+          }
+        });
+
+        // Update the cart (removes all lines in one request)
+        await fetch('/cart/update.js', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ updates }),
+        });
+
+        // Refresh the Drawer content to show the item is gone
+        // This uses the standard Shopify theme fetch pattern
+        const sectionRes = await fetch(`${window.location.pathname}?section_id=cart-drawer`);
+        const html = await sectionRes.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        
+        const oldInner = document.querySelector('.drawer__inner');
+        const newInner = doc.querySelector('.drawer__inner');
+        
+        if (oldInner && newInner) {
+          oldInner.innerHTML = newInner.innerHTML;
+          // Re-run toggle initialization for the new HTML
+          initBundleToggles();
         }
-      });
 
-      console.log('Removing bundle lines:', Object.keys(updates).length);
-
-      // Remove all at once — faster than one by one
-      await fetch('/cart/update.js', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ updates }),
-      });
-
-      // Full page section refresh
-      const sectionRes = await fetch('/?section_id=cart-drawer');
-      const html = await sectionRes.text();
-
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      const cartDrawerEl = document.querySelector('cart-drawer');
-
-      // Replace entire cart drawer inner
-      const newInner = doc.querySelector('.drawer__inner');
-      const oldInner = document.querySelector('.drawer__inner');
-      if (newInner && oldInner) {
-        oldInner.innerHTML = newInner.innerHTML;
+      } catch (err) {
+        console.error('Bundle removal failed:', err);
       }
-
-      // Update cart count
-      const newCount = doc.querySelector('.cart-count-bubble');
-      const oldCount = document.querySelector('.cart-count-bubble');
-      if (newCount && oldCount) {
-        oldCount.innerHTML = newCount.innerHTML;
-      } else if (oldCount) {
-        oldCount.innerHTML = '';
-      }
-
-      // Get updated cart to check if empty
-      const updatedCart = await fetch('/cart.js').then(r => r.json());
-
-      if (updatedCart.item_count === 0 && cartDrawerEl) {
-        cartDrawerEl.classList.add('is-empty');
-      } else {
-        hydrateBundleItems();
-      }
-
-    } catch (err) {
-      console.error('Bundle remove error:', err);
-    }
-  }, true);
-}
-
-function debouncedHydrate() {
-    clearTimeout(hydrateTimer);
-    hydrateTimer = setTimeout(() => {
-      hydrateBundleItems();
-    }, 300);
+    }, true);
   }
 
+  // Initialize on load
   document.addEventListener('DOMContentLoaded', () => {
-    preloadAllBundleImages();
-    hydrateBundleItems();
+    initBundleToggles();
     handleBundleRemove();
   });
 
-  // Debounced observer — prevents multiple rapid fires
-  const observer = new MutationObserver(debouncedHydrate);
+  // Re-initialize if the cart drawer is dynamically updated (Mutation Observer)
+  const observer = new MutationObserver(() => {
+    initBundleToggles();
+  });
   observer.observe(document.body, { childList: true, subtree: true });
 
 })();
