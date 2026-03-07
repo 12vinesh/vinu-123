@@ -1,34 +1,39 @@
 (function () {
   'use strict';
 
-  function patchCartRemoveButton() {
-    const originalClass = customElements.get('cart-remove-button');
-    if (!originalClass) {
-      // Not defined yet, retry
-      setTimeout(patchCartRemoveButton, 50);
-      return;
+  // Intercept customElements.define to patch CartRemoveButton before it registers
+  const originalDefine = customElements.define.bind(customElements);
+
+  customElements.define = function (name, constructor, options) {
+    if (name === 'cart-remove-button') {
+      const PatchedClass = class extends constructor {
+        constructor() {
+          super(); // This runs Dawn's constructor + its click listener
+
+          // Now add OUR listener — runs after Dawn's
+          this.addEventListener('click', async (e) => {
+            const bundleKey = this.dataset.bundleKey;
+            if (!bundleKey) return; // Not a bundle, let Dawn handle it
+
+            e.preventDefault();
+            e.stopImmediatePropagation();
+
+            try {
+              await removeBundleItems(bundleKey);
+              await refreshDrawer();
+            } catch (err) {
+              console.error('Bundle removal failed:', err);
+              window.location.reload();
+            }
+          });
+        }
+      };
+
+      return originalDefine(name, PatchedClass, options);
     }
 
-    // Patch the connectedCallback
-    const originalConnected = originalClass.prototype.connectedCallback;
-
-    originalClass.prototype.connectedCallback = function () {
-      const bundleKey = this.dataset.bundleKey;
-
-      if (bundleKey) {
-        // Our own handler — skip Dawn's entirely
-        this.querySelector('a')?.addEventListener('click', async (e) => {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          await removeBundleItems(bundleKey);
-          await refreshDrawer();
-        });
-      } else {
-        // Not a bundle item — run Dawn's original logic
-        if (originalConnected) originalConnected.call(this);
-      }
-    };
-  }
+    return originalDefine(name, constructor, options);
+  };
 
   async function removeBundleItems(bundleKey) {
     const cart = await fetch('/cart.js').then(r => r.json());
@@ -48,36 +53,20 @@
   }
 
   async function refreshDrawer() {
-    try {
-      const res = await fetch('/?sections=cart-drawer');
-      const data = await res.json();
+    const res = await fetch('/?sections=cart-drawer');
+    const data = await res.json();
+    const html = data['cart-drawer'];
+    if (!html) { window.location.reload(); return; }
 
-      const sectionHTML = data['cart-drawer'];
-      if (!sectionHTML) { window.location.reload(); return; }
+    const doc = new DOMParser().parseFromString(html, 'text/html');
 
-      const doc = new DOMParser().parseFromString(sectionHTML, 'text/html');
+    const newInner = doc.querySelector('.drawer__inner');
+    const curInner = document.querySelector('.drawer__inner');
+    if (newInner && curInner) curInner.innerHTML = newInner.innerHTML;
 
-      // Swap drawer contents
-      const newInner = doc.querySelector('.drawer__inner');
-      const curInner = document.querySelector('.drawer__inner');
-      if (newInner && curInner) curInner.innerHTML = newInner.innerHTML;
-
-      // Update cart count badge
-      const newBadge = doc.querySelector('.cart-count-bubble');
-      const curBadge = document.querySelector('.cart-count-bubble');
-      if (newBadge && curBadge) curBadge.innerHTML = newBadge.innerHTML;
-
-    } catch (err) {
-      console.error('Drawer refresh failed:', err);
-      window.location.reload();
-    }
-  }
-
-  // Run after DOM + custom elements are ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', patchCartRemoveButton);
-  } else {
-    patchCartRemoveButton();
+    const newBadge = doc.querySelector('.cart-count-bubble');
+    const curBadge = document.querySelector('.cart-count-bubble');
+    if (newBadge && curBadge) curBadge.innerHTML = newBadge.innerHTML;
   }
 
 })();
