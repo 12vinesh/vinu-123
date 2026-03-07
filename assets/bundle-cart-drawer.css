@@ -103,12 +103,8 @@
 .bundle-child-list {
   transition: all 0.3s ease;
 }
-tr.is-bundle-parent cart-remove-button {
-  display: none;
-}
-tr:has(.cart-bundle-remove) cart-remove-button {
-  display: none;
-}
+
+
 tr:has(.cart-bundle-remove) cart-remove-button {
   display: none;
 }
