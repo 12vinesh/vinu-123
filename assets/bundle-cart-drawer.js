@@ -1,56 +1,42 @@
 (function () {
   'use strict';
 
-  // Intercept customElements.define to patch CartRemoveButton before it registers
-  const originalDefine = customElements.define.bind(customElements);
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.cart-bundle-remove');
+    if (!btn) return;
 
-  customElements.define = function (name, constructor, options) {
-    if (name === 'cart-remove-button') {
-      const PatchedClass = class extends constructor {
-        constructor() {
-          super(); // This runs Dawn's constructor + its click listener
+    e.preventDefault();
+    e.stopImmediatePropagation();
 
-          // Now add OUR listener — runs after Dawn's
-          this.addEventListener('click', async (e) => {
-            const bundleKey = this.dataset.bundleKey;
-            if (!bundleKey) return; // Not a bundle, let Dawn handle it
+    const bundleKey = btn.dataset.bundleKey;
+    if (!bundleKey) return;
 
-            e.preventDefault();
-            e.stopImmediatePropagation();
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
 
-            try {
-              await removeBundleItems(bundleKey);
-              await refreshDrawer();
-            } catch (err) {
-              console.error('Bundle removal failed:', err);
-              window.location.reload();
-            }
-          });
+    try {
+      const cart = await fetch('/cart.js').then(r => r.json());
+
+      const updates = {};
+      cart.items.forEach(item => {
+        if (item.properties?._bundleKey === bundleKey) {
+          updates[item.key] = 0;
         }
-      };
+      });
 
-      return originalDefine(name, PatchedClass, options);
+      await fetch('/cart/update.js', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates }),
+      });
+
+      await refreshDrawer();
+
+    } catch (err) {
+      console.error('Bundle removal failed:', err);
+      window.location.reload();
     }
-
-    return originalDefine(name, constructor, options);
-  };
-
-  async function removeBundleItems(bundleKey) {
-    const cart = await fetch('/cart.js').then(r => r.json());
-
-    const updates = {};
-    cart.items.forEach(item => {
-      if (item.properties?._bundleKey === bundleKey) {
-        updates[item.key] = 0;
-      }
-    });
-
-    await fetch('/cart/update.js', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ updates }),
-    });
-  }
+  });
 
   async function refreshDrawer() {
     const res = await fetch('/?sections=cart-drawer');
