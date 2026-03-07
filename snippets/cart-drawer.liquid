@@ -152,33 +152,19 @@
         {% endif %}
       </td>
 <td class="cart-item__totals right" role="cell">
-  {% if item.properties._isParent == 'true' %}
-    <button
-      type="button"
-      class="button button--tertiary cart-bundle-remove"
-      data-bundle-key="{{ item.properties._bundleKey }}"
-      style="display:flex; align-items:center; justify-content:center; min-width:32px; min-height:32px; cursor:pointer; background:none; border:none; padding:0;"
-      aria-label="Remove bundle"
-    >
+  <cart-remove-button data-index="{{ item.index | plus: 1 }}">
+    <a href="{{ item.url_to_remove }}" class="button button--tertiary" style="display:flex; align-items:center; justify-content:center; min-width:32px; min-height:32px;">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" aria-hidden="true" focusable="false" class="icon icon-remove" width="16" height="16">
         <path d="M14 3h-3.53a3.001 3.001 0 00-5.94 0H1V4h1v11a1 1 0 001 1h10a1 1 0 001-1V4h1V3zM6.5 3a1 1 0 011.97 0H6.5zM12 15H4V4h8v11z" fill="currentColor"></path>
       </svg>
-    </button>
-  {% else %}
-    <cart-remove-button data-index="{{ item.index | plus: 1 }}">
-      <a href="{{ item.url_to_remove }}" class="button button--tertiary" style="display:flex; align-items:center; justify-content:center; min-width:32px; min-height:32px;">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" aria-hidden="true" focusable="false" class="icon icon-remove" width="16" height="16">
-          <path d="M14 3h-3.53a3.001 3.001 0 00-5.94 0H1V4h1v11a1 1 0 001 1h10a1 1 0 001-1V4h1V3zM6.5 3a1 1 0 011.97 0H6.5zM12 15H4V4h8v11z" fill="currentColor"></path>
-        </svg>
-      </a>
-    </cart-remove-button>
-  {% endif %}
+    </a>
+  </cart-remove-button>
 </td>
     </tr>
   {% endfor %}
     </tbody>
    
-    
+
                 </table>
               </div>
             {%- endif -%}
