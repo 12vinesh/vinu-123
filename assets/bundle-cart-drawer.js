@@ -59,96 +59,96 @@ Object.keys(groups).forEach(key => {
     return groups;
   }
 
-  async function hydrateBundleItems() {
-    // Prevent concurrent runs
-    if (isHydrating) return;
+  // async function hydrateBundleItems() {
+  //   // Prevent concurrent runs
+  //   if (isHydrating) return;
 
-    const bundleParents = document.querySelectorAll('.cart-item--bundle');
-    if (!bundleParents.length) return;
+  //   const bundleParents = document.querySelectorAll('.cart-item--bundle');
+  //   if (!bundleParents.length) return;
 
-    // Check if already hydrated — skip if all parents already have children rendered
-    const alreadyDone = Array.from(bundleParents).every(el =>
-      el.querySelector('.bundle-pair-item') !== null
-    );
-    if (alreadyDone) return;
+  //   // Check if already hydrated — skip if all parents already have children rendered
+  //   const alreadyDone = Array.from(bundleParents).every(el =>
+  //     el.querySelector('.bundle-pair-item') !== null
+  //   );
+  //   if (alreadyDone) return;
 
-    isHydrating = true;
+  //   isHydrating = true;
 
-    try {
-      const groups = await getCartBundleChildren();
+  //   try {
+  //     const groups = await getCartBundleChildren();
 
-      for (const parentEl of bundleParents) {
-        const bundleKey = parentEl.dataset.bundleKey;
-        if (!bundleKey) continue;
+  //     for (const parentEl of bundleParents) {
+  //       const bundleKey = parentEl.dataset.bundleKey;
+  //       if (!bundleKey) continue;
 
-        // Skip if already hydrated
-        if (parentEl.querySelector('.bundle-pair-item')) continue;
+  //       // Skip if already hydrated
+  //       if (parentEl.querySelector('.bundle-pair-item')) continue;
 
-        const children = groups[bundleKey]?.children || [];
-        const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
-        const toggleBtn = parentEl.querySelector('[data-bundle-toggle]');
+  //       const children = groups[bundleKey]?.children || [];
+  //       const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
+  //       const toggleBtn = parentEl.querySelector('[data-bundle-toggle]');
 
-        if (!pairsList) continue;
+  //       if (!pairsList) continue;
 
-        pairsList.innerHTML = '';
+  //       pairsList.innerHTML = '';
 
-        if (toggleBtn) {
-          toggleBtn.textContent = `Hide ${children.length} items ▲`;
-          toggleBtn.setAttribute('aria-expanded', 'true');
-        }
+  //       if (toggleBtn) {
+  //         toggleBtn.textContent = `Hide ${children.length} items ▲`;
+  //         toggleBtn.setAttribute('aria-expanded', 'true');
+  //       }
 
-        const variants = await Promise.all(
-          children.map(child => fetchVariant(child.variantId))
-        );
+  //       const variants = await Promise.all(
+  //         children.map(child => fetchVariant(child.variantId))
+  //       );
 
-        children.forEach((child, index) => {
-          const variant = variants[index];
+  //       children.forEach((child, index) => {
+  //         const variant = variants[index];
 
-          const li = document.createElement('li');
-          li.className = 'bundle-pair-item';
+  //         const li = document.createElement('li');
+  //         li.className = 'bundle-pair-item';
 
-          const inner = document.createElement('div');
-          inner.className = 'bundle-pair-item__inner';
+  //         const inner = document.createElement('div');
+  //         inner.className = 'bundle-pair-item__inner';
 
-          const imgWrap = document.createElement('div');
-          imgWrap.className = 'bundle-pair-item__img-wrap';
+  //         const imgWrap = document.createElement('div');
+  //         imgWrap.className = 'bundle-pair-item__img-wrap';
 
-          if (variant?.featured_image?.src) {
-            const img = document.createElement('img');
-            img.src = variant.featured_image.src;
-            img.alt = variant.title || '';
-            img.width = 40;
-            img.height = 40;
-            img.loading = 'eager';
-            img.className = 'bundle-pair-item__img';
-            imgWrap.appendChild(img);
-          }
+  //         if (variant?.featured_image?.src) {
+  //           const img = document.createElement('img');
+  //           img.src = variant.featured_image.src;
+  //           img.alt = variant.title || '';
+  //           img.width = 40;
+  //           img.height = 40;
+  //           img.loading = 'eager';
+  //           img.className = 'bundle-pair-item__img';
+  //           imgWrap.appendChild(img);
+  //         }
 
-          const info = document.createElement('div');
-          info.className = 'bundle-pair-item__info';
+  //         const info = document.createElement('div');
+  //         info.className = 'bundle-pair-item__info';
 
-          const label = document.createElement('span');
-          label.className = 'bundle-pair-item__label';
-          label.textContent = `${child.pairLabel}:`;
+  //         const label = document.createElement('span');
+  //         label.className = 'bundle-pair-item__label';
+  //         label.textContent = `${child.pairLabel}:`;
 
-          const value = document.createElement('span');
-          value.className = 'bundle-pair-item__value';
-          value.textContent = ` ${variant?.title || child.title}`;
+  //         const value = document.createElement('span');
+  //         value.className = 'bundle-pair-item__value';
+  //         value.textContent = ` ${variant?.title || child.title}`;
 
-          info.appendChild(label);
-          info.appendChild(value);
-          inner.appendChild(imgWrap);
-          inner.appendChild(info);
-          li.appendChild(inner);
-          pairsList.appendChild(li);
-        });
+  //         info.appendChild(label);
+  //         info.appendChild(value);
+  //         inner.appendChild(imgWrap);
+  //         inner.appendChild(info);
+  //         li.appendChild(inner);
+  //         pairsList.appendChild(li);
+  //       });
 
-        initToggle(parentEl);
-      }
-    } finally {
-      isHydrating = false;
-    }
-  }
+  //       initToggle(parentEl);
+  //     }
+  //   } finally {
+  //     isHydrating = false;
+  //   }
+  // }
 
   function initToggle(cartItemEl) {
     const toggleBtn = cartItemEl.querySelector('[data-bundle-toggle]');
