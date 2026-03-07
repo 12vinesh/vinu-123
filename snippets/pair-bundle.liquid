@@ -559,11 +559,14 @@ document.addEventListener("DOMContentLoaded", function () {
   checkInventory();
   updatePropertiesInForm();
 
-  document.addEventListener("submit", async function (e) {
-    const form = e.target.closest('form[action*="/cart/add"]');
-    if (!form) return;
-    if (!document.querySelectorAll(".wrapper_pair").length) return;
+  let isSubmitting = false;
 
+document.addEventListener("submit", async function (e) {
+  const form = e.target.closest('form[action*="/cart/add"]');
+  if (!form) return;
+  if (!document.querySelectorAll(".wrapper_pair").length) return;
+  if (isSubmitting) return;
+  isSubmitting = true;
     e.preventDefault();
     e.stopImmediatePropagation();
 
