@@ -598,6 +598,56 @@ document.addEventListener("submit", async function handleBundleSubmit(e) {
   isSubmitting = false;
 
 }, true);
+function collectBundleVariants(productForm) {
+
+  const variantIds = [];
+
+  productForm.querySelectorAll(".bundle-variant-select").forEach(select => {
+
+    const value = select.value;
+
+    if (value && value !== "none") {
+      variantIds.push(parseInt(value));
+    }
+
+  });
+
+  return variantIds;
+
+}
+function buildBundleItems(productForm, variantIds) {
+
+  const parentVariantId = productForm.querySelector('[name="id"]').value;
+
+  const bundleKey = `bundle-${Date.now()}-${variantIds.join('-')}`;
+
+  const items = [];
+
+  items.push({
+    id: parentVariantId,
+    quantity: 1,
+    properties: {
+      bundle: bundleKey,
+      bundle_parent: true
+    }
+  });
+
+  variantIds.forEach(id => {
+
+    items.push({
+      id: id,
+      quantity: 1,
+      properties: {
+        bundle: bundleKey,
+        bundle_child: true
+      }
+    });
+
+  });
+
+  return items;
+
+}
 
 }); // end DOMContentLoaded
 </script>
