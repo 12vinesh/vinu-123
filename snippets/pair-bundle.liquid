@@ -562,7 +562,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   let isSubmitting = false;
 
-document.addEventListener("submit", async function (e) {
+productForm.addEventListener("submit", async function (e) {
   const form = e.target.closest('form[action*="/cart/add"]');
   if (!form) return;
   if (!document.querySelectorAll(".wrapper_pair").length) return;
