@@ -134,20 +134,38 @@
           Hide items ▴
         </button>
         
-        <ul class="bundle-children-list">
-          {% assign parent_key = item.properties._bundleKey %}
-          {% for child in cart.items %}
-            {% if child.properties._bundleKey == parent_key and child.properties._isChild == 'true' %}
-              <li class="bundle-child-row">
-                <img src="{{ child.variant.image | default: child.image | image_url: width: 100 }}" width="50">
-                <div class="child-text">
-                  <strong>{{ child.properties._pairLabel }}:</strong> 
-                  {{ child.variant.title }}
-                </div>
-              </li>
-            {% endif %}
-          {% endfor %}
-        </ul>
+       <ul class="bundle-child-list">
+  {% assign current_bundle_key = item.properties._bundleKey %}
+  {% for child in cart.items %}
+    {% if child.properties._bundleKey == current_bundle_key and child.properties._isChild == 'true' %}
+      <li class="bundle-child-item" style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+        
+        {% comment %} 
+          Directly access the variant image to ensure color-accuracy 
+        {% endcomment %}
+        <div class="bundle-child-image">
+          {% if child.variant.image %}
+            <img src="{{ child.variant.image | image_url: width: 80 }}" 
+                 alt="{{ child.variant.title }}" 
+                 width="40" height="40" 
+                 loading="lazy" 
+                 style="border-radius: 4px; border: 1px solid #eee;">
+          {% else %}
+            <img src="{{ child.image | image_url: width: 80 }}" 
+                 alt="{{ child.title }}" 
+                 width="40" height="40" 
+                 loading="lazy">
+          {% endif %}
+        </div>
+
+        <div class="bundle-child-info">
+          <span class="label" style="font-weight: 600;">{{ child.properties._pairLabel }}:</span>
+          <span class="value">{{ child.variant.title }}</span>
+        </div>
+      </li>
+    {% endif %}
+  {% endfor %}
+</ul>
       {% endif %}
     </div>
   </div>
