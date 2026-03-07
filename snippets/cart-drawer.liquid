@@ -130,26 +130,37 @@
       <td class="cart-item__details" role="cell">
         <a href="{{ item.url }}" class="cart-item__name h4 break">{{ item.product.title }}</a>
         <div class="cart-item__price-wrapper">{{ item.final_line_price | money }}</div>
-
-        {% if item.properties._isParent == 'true' %}
-          <div class="bundle-expansion-wrapper" style="margin-top: 10px;">
-            <button class="bundle-toggle" type="button" onclick="this.nextElementSibling.classList.toggle('hidden')" style="background:none; border:none; text-decoration:underline; cursor:pointer; font-size:12px; padding:0; color:#666;">
-              Hide items ▴
-            </button>
-            
-            <ul class="bundle-child-list" style="list-style:none; padding-left:15px; border-left: 2px solid #eee; margin-top:10px;">
-              {% assign p_key = item.properties._bundleKey %}
-              {% for child in cart.items %}
-                {% if child.properties._bundleKey == p_key and child.properties._isChild == 'true' %}
-                  <li style="display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:13px;">
-                    <img src="{{ child.variant.image | default: child.image | image_url: width: 60 }}" width="30" height="30" style="border-radius:4px;">
-                    <span>{{ child.properties._pairLabel }}: {{ child.variant.title }}</span>
-                  </li>
-                {% endif %}
-              {% endfor %}
-            </ul>
-          </div>
+{% if item.properties._isParent == 'true' %}
+  <div class="bundle-expansion-wrapper" style="margin-top: 10px;">
+    <button class="bundle-toggle" type="button" 
+      onclick="this.nextElementSibling.classList.toggle('hidden')" 
+      style="background:none; border:none; text-decoration:underline; cursor:pointer; font-size:12px; padding:0; color:#666;">
+      Hide items ▴
+    </button>
+    
+    <ul class="bundle-child-list" style="list-style:none; padding-left:15px; border-left: 2px solid #eee; margin-top:10px;">
+      {% assign p_key = item.properties._bundleKey %}
+      {% for child in cart.items %}
+        {% if child.properties._bundleKey == p_key and child.properties._isChild == 'true' %}
+          <li style="display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:13px;">
+            <img src="{{ child.variant.image | default: child.image | image_url: width: 60 }}" width="30" height="30" style="border-radius:4px;">
+            <span>{{ child.properties._pairLabel }}: {{ child.variant.title }}</span>
+          </li>
         {% endif %}
+      {% endfor %}
+    </ul>
+
+    <!-- Simple plain button, no custom elements, no conflicts -->
+    <button
+      type="button"
+      class="cart-bundle-remove"
+      data-bundle-key="{{ item.properties._bundleKey }}"
+      style="margin-top:8px; background:none; border:none; padding:0; cursor:pointer; font-size:12px; color:#999; text-decoration:underline;"
+    >
+      Remove bundle
+    </button>
+  </div>
+{% endif %}
       </td>
 <td class="cart-item__totals right" role="cell">
   <cart-remove-button data-index="{{ item.index | plus: 1 }}">
