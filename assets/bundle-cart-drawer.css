@@ -104,5 +104,5 @@
   transition: all 0.3s ease;
 }
 tr.is-bundle-parent cart-remove-button {
-  display: none !important;
+  display: none;
 }
