@@ -44,7 +44,7 @@
     }
   });
 
-  function refreshDrawer(cart) {
+ window.refreshDrawer = function(cart) {
     const cartDrawer = document.querySelector('cart-drawer');
     const drawerItems = document.querySelector('cart-drawer-items');
     const checkoutBtn = document.querySelector('#CartDrawer-Checkout');
