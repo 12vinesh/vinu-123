@@ -109,3 +109,6 @@ tr.is-bundle-parent cart-remove-button {
 tr:has(.cart-bundle-remove) cart-remove-button {
   display: none;
 }
+tr:has(.cart-bundle-remove) cart-remove-button {
+  display: none;
+}
