@@ -561,118 +561,114 @@ document.addEventListener("DOMContentLoaded", function () {
   updatePropertiesInForm();
   document.addEventListener("submit", handleBundleSubmit, true);
 
-  let isSubmitting = false;
+ let isSubmitting = false;
 
-let isSubmitting = false;
-
-document.addEventListener("submit", async function handleBundleSubmit(e) {
-
-  const productForm = e.target.closest('form[action="/cart/add"]');
-
-  if (!productForm) return;
-
-  if (isSubmitting) {
-    e.preventDefault();
-    return;
-  }
-
-  e.preventDefault();
-  e.stopImmediatePropagation();
-
+document.addEventListener("submit", async function (e) {
+  const form = e.target.closest('form[action*="/cart/add"]');
+  if (!form) return;
+  if (!document.querySelectorAll(".wrapper_pair").length) return;
+  if (isSubmitting) return;
   isSubmitting = true;
+  e.preventDefault();
+  e.stopPropagation();
+  e.stopImmediatePropagation();
+    const submitBtn = form.querySelector('[type="submit"]');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Adding...'; }
 
-  try {
+    try {
+      const properties = collectLineItemProperties();
+      const bundleVariantId = form.querySelector('[name="id"]')?.value;
+      if (!bundleVariantId) throw new Error('No bundle variant ID');
 
-    const variantIds = collectBundleVariants(productForm);
+      const variantIds = (properties['_bundlePairIds'] || '').split(',').map(s => s.trim()).filter(Boolean);
+      const pairLabels = (properties['_bundlePairLabels'] || '').split(',').map(s => s.trim());
 
-    const items = buildBundleItems(productForm, variantIds);
+      if (variantIds.length === 0) throw new Error('No pair variant IDs');
 
-    await addBundleToCart(items);
-
-  } catch (error) {
-
-    console.error("Bundle submit error:", error);
-
-  }
-
-  isSubmitting = false;
-
-}, true);
-function collectBundleVariants(productForm) {
-
-  const variantIds = [];
-
-  productForm.querySelectorAll(".bundle-variant-select").forEach(select => {
-
-    const value = select.value;
-
-    if (value && value !== "none") {
-      variantIds.push(parseInt(value));
-    }
-
-  });
-
-  return variantIds;
-
-}
-function buildBundleItems(productForm, variantIds) {
-
-  const parentVariantId = productForm.querySelector('[name="id"]').value;
-
-  const bundleKey = `bundle-${Date.now()}-${variantIds.join('-')}`;
-
-  const items = [];
-
-  items.push({
-    id: parentVariantId,
+    const bundleKey = `bundle-${Date.now()}-${variantIds.join('-')}`;
+     const items = [
+  {
+    id: parseInt(bundleVariantId),
     quantity: 1,
     properties: {
-      bundle: bundleKey,
-      bundle_parent: true
+      '_bundleKey': bundleKey,
+      '_isParent': 'true',
+      '_bundleId': bundleKey,
+    }
+  },
+  ...variantIds.map((variantId, index) => ({
+    id: parseInt(variantId),
+    quantity: 1,
+    properties: {
+      '_bundleKey': bundleKey,
+      '_isChild': 'true',
+      '_pairLabel': pairLabels[index] || `Pair ${index + 1}`,
+      '_bundleId': bundleKey,
+    }
+  }))
+];
+
+      console.log('Adding items:', JSON.stringify(items, null, 2));
+        form.querySelectorAll('input[name^="properties["]').forEach(i => i.remove());
+
+      // Check if identical bundle already in cart
+const existingCart = await fetch('/cart.js').then(r => r.json());
+const bundleAlreadyExists = existingCart.items.some(
+  item => item.properties?._bundleKey === bundleKey && item.properties?._isParent === 'true'
+);
+
+if (bundleAlreadyExists) {
+  console.log('Duplicate bundle detected, skipping');
+  // Just open the drawer
+  const freshCart = await fetch('/cart.js').then(r => r.json());
+  if (typeof window.refreshDrawer === 'function') window.refreshDrawer(freshCart);
+  const cartDrawerEl = document.querySelector('cart-drawer');
+  if (cartDrawerEl) {
+    cartDrawerEl.classList.remove('is-empty');
+    if (typeof cartDrawerEl.open === 'function') cartDrawerEl.open();
+  }
+  return;
+}
+
+      const response = await fetch('/cart/add.js', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ items }),
+      });
+
+      const data = await response.json();
+      console.log('Cart response:', data);
+
+      if (data.status) throw new Error(data.description || 'Cart error');
+
+      // Refresh cart drawer
+     fetch('/?sections=cart-drawer')
+  .then(r => r.json())
+  .then(data => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(data['cart-drawer'], 'text/html');
+    const newDrawer = doc.querySelector('.drawer__inner');
+    const oldDrawer = document.querySelector('.drawer__inner');
+    if (newDrawer && oldDrawer) oldDrawer.innerHTML = newDrawer.innerHTML;
+    const newCount = doc.querySelector('.cart-count-bubble');
+    const oldCount = document.querySelector('.cart-count-bubble');
+    if (newCount && oldCount) oldCount.innerHTML = newCount.innerHTML;
+    if (!newCount && oldCount) oldCount.innerHTML = '';
+    const cartDrawerEl = document.querySelector('cart-drawer');
+    if (cartDrawerEl) {
+      cartDrawerEl.classList.remove('is-empty');
+      if (typeof cartDrawerEl.open === 'function') cartDrawerEl.open();
     }
   });
-
-  variantIds.forEach(id => {
-
-    items.push({
-      id: id,
-      quantity: 1,
-      properties: {
-        bundle: bundleKey,
-        bundle_child: true
-      }
-    });
-
-  });
-
-  return items;
-
+    } catch (err) {
+      console.error('Bundle add error:', err);
+      alert('Error: ' + err.message);
+    } finally {
+  isSubmitting = false;
+  if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Add to cart'; }
 }
-async function addBundleToCart(items) {
-
-  const response = await fetch('/cart/add.js', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ items })
-  });
-
-  if (!response.ok) {
-    throw new Error("Cart add failed");
-  }
-
-  const data = await response.json();
-
-  document.dispatchEvent(
-    new CustomEvent("cart:refresh", { bubbles: true })
-  );
-
-  return data;
-
-}
+  }, true);
 
 }); // end DOMContentLoaded
 </script>
 {% endif %}
-    
