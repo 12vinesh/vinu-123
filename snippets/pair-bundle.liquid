@@ -584,7 +584,7 @@ document.addEventListener("submit", async function (e) {
 
       if (variantIds.length === 0) throw new Error('No pair variant IDs');
 
-      const bundleKey = `bundle-${Date.now()}`;
+      const bundleKey = `bundle-${bundleVariantId}-${variantIds.join('-')}`;
      const items = [
   {
     id: parseInt(bundleVariantId),
