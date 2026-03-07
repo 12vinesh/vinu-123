@@ -1,78 +1,83 @@
 (function () {
   'use strict';
 
-  document.addEventListener('DOMContentLoaded', () => {
-    document.addEventListener('click', async (e) => {
-      // Target the anchor/button inside cart-remove-button that has a bundle key
-      const removeBtn = e.target.closest('cart-remove-button');
-      if (!removeBtn) return;
-
-      const bundleKey = removeBtn.dataset.bundleKey;
-      if (!bundleKey) return; // Let Dawn handle non-bundle removes normally
-
-      e.preventDefault();
-      e.stopImmediatePropagation();
-
-      try {
-        // 1. Fetch current cart
-        const cartRes = await fetch('/cart.js');
-        const cart = await cartRes.json();
-
-        // 2. Build updates object - zero out all items sharing this bundleKey
-        const updates = {};
-        cart.items.forEach(item => {
-          if (item.properties && item.properties._bundleKey === bundleKey) {
-            updates[item.key] = 0;
-          }
-        });
-
-        // 3. Remove all bundle items
-        await fetch('/cart/update.js', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ updates }),
-        });
-
-        // 4. Re-render drawer using Shopify's Section Rendering API
-        await refreshDrawer();
-
-      } catch (err) {
-        console.error('Bundle removal failed:', err);
-        window.location.reload();
-      }
-
-    }, true); // <-- capture phase: fires BEFORE Dawn's bubble-phase listener
-  });
-
-  async function refreshDrawer() {
-    const sectionId = 'cart-drawer'; // Must match your section file name
-    const url = `${window.location.origin}/?sections=${sectionId}`;
-
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (!data[sectionId]) {
-      window.location.reload();
+  function patchCartRemoveButton() {
+    const originalClass = customElements.get('cart-remove-button');
+    if (!originalClass) {
+      // Not defined yet, retry
+      setTimeout(patchCartRemoveButton, 50);
       return;
     }
 
-    // Parse the returned HTML and swap the inner drawer content
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(data[sectionId], 'text/html');
+    // Patch the connectedCallback
+    const originalConnected = originalClass.prototype.connectedCallback;
 
-    const newDrawer = doc.querySelector('#CartDrawer');
-    const currentDrawer = document.querySelector('#CartDrawer');
+    originalClass.prototype.connectedCallback = function () {
+      const bundleKey = this.dataset.bundleKey;
 
-    if (newDrawer && currentDrawer) {
-      currentDrawer.innerHTML = newDrawer.innerHTML;
+      if (bundleKey) {
+        // Our own handler — skip Dawn's entirely
+        this.querySelector('a')?.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          await removeBundleItems(bundleKey);
+          await refreshDrawer();
+        });
+      } else {
+        // Not a bundle item — run Dawn's original logic
+        if (originalConnected) originalConnected.call(this);
+      }
+    };
+  }
+
+  async function removeBundleItems(bundleKey) {
+    const cart = await fetch('/cart.js').then(r => r.json());
+
+    const updates = {};
+    cart.items.forEach(item => {
+      if (item.properties?._bundleKey === bundleKey) {
+        updates[item.key] = 0;
+      }
+    });
+
+    await fetch('/cart/update.js', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ updates }),
+    });
+  }
+
+  async function refreshDrawer() {
+    try {
+      const res = await fetch('/?sections=cart-drawer');
+      const data = await res.json();
+
+      const sectionHTML = data['cart-drawer'];
+      if (!sectionHTML) { window.location.reload(); return; }
+
+      const doc = new DOMParser().parseFromString(sectionHTML, 'text/html');
+
+      // Swap drawer contents
+      const newInner = doc.querySelector('.drawer__inner');
+      const curInner = document.querySelector('.drawer__inner');
+      if (newInner && curInner) curInner.innerHTML = newInner.innerHTML;
+
+      // Update cart count badge
+      const newBadge = doc.querySelector('.cart-count-bubble');
+      const curBadge = document.querySelector('.cart-count-bubble');
+      if (newBadge && curBadge) curBadge.innerHTML = newBadge.innerHTML;
+
+    } catch (err) {
+      console.error('Drawer refresh failed:', err);
+      window.location.reload();
     }
+  }
 
-    // Also update the cart count bubble if present
-    const newCount = doc.querySelector('.cart-count-bubble');
-    const currentCount = document.querySelector('.cart-count-bubble');
-    if (newCount && currentCount) {
-      currentCount.innerHTML = newCount.innerHTML;
-    }
+  // Run after DOM + custom elements are ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', patchCartRemoveButton);
+  } else {
+    patchCartRemoveButton();
   }
 
 })();
