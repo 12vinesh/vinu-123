@@ -276,7 +276,8 @@
 /** ----------------------------------------------------------
  * VARIANT MAP — must be outside DOMContentLoaded
  * ---------------------------------------------------------- */
-const variantMap = {};
+//This block collects all variants data from Shopify and stores them in a JavaScript array.
+ const variantMap = {};
 
 const allVariantData = [
   {%- for metaobject in product.metafields.custom.product_variants.value -%}
