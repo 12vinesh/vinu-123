@@ -1,48 +1,64 @@
 (function () {
   'use strict';
 
-  function handleBundleRemove() {
-    document.addEventListener('click', async (e) => {
-      const removeBtn = e.target.closest('cart-remove-button[data-bundle-key]');
-      if (!removeBtn) return;
+  customElements.define('cart-remove-button', class extends HTMLElement {
+    connectedCallback() {
+      this.querySelector('a, button')?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopImmediatePropagation();
 
-      const bundleKey = removeBtn.dataset.bundleKey;
-      if (!bundleKey) return;
+        const bundleKey = this.dataset.bundleKey;
 
-      e.preventDefault();
-      e.stopImmediatePropagation();
-
-      try {
-        const res = await fetch('/cart.js');
-        const cart = await res.json();
-
-        const updates = {};
-        cart.items.forEach(item => {
-          if (item.properties && item.properties._bundleKey === bundleKey) {
-            updates[item.key] = 0;
-          }
-        });
-
-        await fetch('/cart/update.js', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ updates }),
-        });
-
-        // Force reload the drawer to show changes
-        if (window.location.pathname.includes('cart')) {
-          window.location.reload();
+        if (bundleKey) {
+          await removeBundleByKey(bundleKey);
         } else {
-          // Standard Dawn/Sense refresh logic
-          const drawer = document.querySelector('cart-drawer');
-          if (drawer) drawer.renderContents(await (await fetch('/cart.js')).json());
-          else window.location.reload();
+          // Fall back to default Dawn single-item removal
+          const index = this.dataset.index;
+          await fetch('/cart/change.js', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ line: index, quantity: 0 }),
+          });
         }
-      } catch (err) {
-        console.error('Bundle removal failed:', err);
+
+        await refreshCartDrawer();
+      });
+    }
+  });
+
+  async function removeBundleByKey(bundleKey) {
+    const res = await fetch('/cart.js');
+    const cart = await res.json();
+
+    const updates = {};
+    cart.items.forEach(item => {
+      if (item.properties?._bundleKey === bundleKey) {
+        updates[item.key] = 0;
       }
-    }, true);
+    });
+
+    await fetch('/cart/update.js', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ updates }),
+    });
   }
 
-  document.addEventListener('DOMContentLoaded', handleBundleRemove);
+  async function refreshCartDrawer() {
+    try {
+      // Dawn's standard cart drawer refresh — triggers re-render via sections API
+      const res = await fetch(`${window.Shopify.routes.root}?sections=cart-drawer`);
+      const data = await res.json();
+      const drawerEl = document.getElementById('CartDrawer');
+      if (drawerEl && data['cart-drawer']) {
+        const html = new DOMParser().parseFromString(data['cart-drawer'], 'text/html');
+        drawerEl.innerHTML = html.querySelector('#CartDrawer').innerHTML;
+      } else {
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error('Cart refresh failed:', err);
+      window.location.reload();
+    }
+  }
 })();
