@@ -99,4 +99,4 @@
   cursor: pointer;
   font-size: 12px;
 }
-.hidden { display: none; }
+.hidden { display: none !important; }
