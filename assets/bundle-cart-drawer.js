@@ -146,7 +146,7 @@ async function hydrateBundleItems() {
 
         const label = document.createElement('span');
         label.className = 'bundle-pair-item__label';
-        label.textContent = child.pairLabel + ':';
+        label.textContent = child.label + ':';
 
         const value = document.createElement('span');
         value.className = 'bundle-pair-item__value';
