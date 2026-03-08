@@ -29,16 +29,23 @@
     } catch(e) {}
   }
 
- async function getCartBundleChildren() {
+ function getPairSortIndex(label) {
+  if (!label) return 999;
+  const lower = label.toLowerCase();
+  if (lower.includes('free')) return 998;
+  const match = lower.match(/(\d+)/);
+  return match ? parseInt(match[1]) : 997;
+}
+
+async function getCartBundleChildren() {
   const res = await fetch('/cart.js');
   const cart = await res.json();
   const groups = {};
 
   cart.items.forEach(item => {
-    // After merge, properties come through as item.properties
-    const isBundle = item.properties?._isBundle === 'true';
+    const isParent = item.properties?._isParent === 'true';
     const bundleKey = item.properties?._bundleKey;
-    if (!isBundle || !bundleKey) return;
+    if (!isParent || !bundleKey) return;
 
     const pairCount = parseInt(item.properties?._pairCount || 0);
     const children = [];
@@ -46,10 +53,17 @@
     for (let i = 0; i < pairCount; i++) {
       const raw = item.properties?.[`_pair_${i}`];
       if (!raw) continue;
-      const [label, variantId] = raw.split('|');
-      children.push({ pairLabel: label, variantId: variantId?.replace('gid://shopify/ProductVariant/', '') });
+      const [label, gid] = raw.split('|');
+      const variantId = gid ? gid.split('/').pop() : null;
+      children.push({
+        pairLabel: label,
+        variantId,
+        sortIndex: getPairSortIndex(label)
+      });
     }
 
+    // Already sorted by Cart Transform but sort here too as safety net
+    children.sort((a, b) => a.sortIndex - b.sortIndex);
     groups[bundleKey] = { children };
   });
 
