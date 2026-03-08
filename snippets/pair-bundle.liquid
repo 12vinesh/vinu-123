@@ -606,24 +606,6 @@ const items = [
       console.log('Adding items:', JSON.stringify(items, null, 2));
         form.querySelectorAll('input[name^="properties["]').forEach(i => i.remove());
 
-      // Check if identical bundle already in cart
-const existingCart = await fetch('/cart.js').then(r => r.json());
-const bundleAlreadyExists = existingCart.items.some(
-  item => item.properties?._bundleKey === bundleKey && item.properties?._isParent === 'true'
-);
-
-if (bundleAlreadyExists) {
-  console.log('Duplicate bundle detected, skipping');
-  // Just open the drawer
-  const freshCart = await fetch('/cart.js').then(r => r.json());
-  if (typeof window.refreshDrawer === 'function') window.refreshDrawer(freshCart);
-  const cartDrawerEl = document.querySelector('cart-drawer');
-  if (cartDrawerEl) {
-    cartDrawerEl.classList.remove('is-empty');
-    if (typeof cartDrawerEl.open === 'function') cartDrawerEl.open();
-  }
-  return;
-}
 
       const response = await fetch('/cart/add.js', {
         method: 'POST',
