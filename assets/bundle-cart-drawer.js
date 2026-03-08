@@ -1,166 +1,244 @@
 (function () {
   'use strict';
 
-  document.addEventListener('click', async (e) => {
-    const btn = e.target.closest('.cart-bundle-remove');
-    if (!btn) return;
+  const variantCache = {};
+  let isHydrating = false;
+  let hydrateTimer = null;
 
-    e.preventDefault();
-    e.stopImmediatePropagation();
-
-    const bundleKey = btn.dataset.bundleKey;
-    if (!bundleKey) return;
-
-    btn.disabled = true;
-    btn.style.opacity = '0.4';
-
+  async function fetchVariant(variantId) {
+    if (variantCache[variantId]) return variantCache[variantId];
     try {
-      // Step 1: get cart
-      const cart = await fetch('/cart.js').then(r => r.json());
+      const res = await fetch(`/variants/${variantId}.js`);
+      const data = await res.json();
+      variantCache[variantId] = data;
+      return data;
+    } catch (e) {
+      return null;
+    }
+  }
 
-      // Step 2: build updates
-      const updates = {};
+  async function preloadAllBundleImages() {
+    try {
+      const res = await fetch('/cart.js');
+      const cart = await res.json();
       cart.items.forEach(item => {
-        if (item.properties?._bundleKey === bundleKey) {
-          updates[item.key] = 0;
+        if (item.properties?._isChild === 'true') {
+          fetchVariant(item.variant_id);
         }
       });
+    } catch(e) {}
+  }
 
-      // Step 3: remove and wait for confirmed response
-      const updatedCart = await fetch('/cart/update.js', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ updates }),
-      }).then(r => r.json());
+  async function getCartBundleChildren() {
+    const res = await fetch('/cart.js');
+    const cart = await res.json();
+    const groups = {};
+    const pairOrder = ['1st pair', '2nd pair', '3rd pair', '4th pair', 'free pair'];
 
-      console.log('items remaining:', updatedCart.item_count);
+    cart.items.forEach(item => {
+      const bundleKey = item.properties?._bundleKey;
+      const isChild = item.properties?._isChild === 'true';
+      if (!bundleKey || !isChild) return;
 
-      // Step 4: rebuild drawer from confirmed cart data
-      refreshDrawer(updatedCart);
+      if (!groups[bundleKey]) groups[bundleKey] = { children: [] };
 
-    } catch (err) {
-      console.error('Bundle removal failed:', err);
-      window.location.reload();
+      const label = item.properties?._pairLabel || '';
+      const sortIndex = pairOrder.indexOf(label.toLowerCase());
+
+      groups[bundleKey].children.push({
+        variantId: item.variant_id,
+        pairLabel: label,
+        title: item.title,
+        sortIndex: sortIndex === -1 ? 99 : sortIndex,
+      });
+    });
+
+    Object.keys(groups).forEach(key => {
+      groups[key].children.sort((a, b) => a.sortIndex - b.sortIndex);
+    });
+
+    return groups;
+  }
+
+  async function hydrateBundleItems() {
+    if (isHydrating) return;
+
+    const bundleParents = document.querySelectorAll('[data-bundle-key]');
+    if (!bundleParents.length) return;
+
+    isHydrating = true;
+
+    try {
+      const groups = await getCartBundleChildren();
+
+      for (const parentEl of bundleParents) {
+        const bundleKey = parentEl.dataset.bundleKey;
+        if (!bundleKey) continue;
+
+        if (parentEl.querySelector('.bundle-pair-item')) continue;
+
+        const children = groups[bundleKey]?.children || [];
+        const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
+        const toggleBtn = parentEl.querySelector('[data-bundle-toggle]');
+
+        if (!pairsList) continue;
+
+        pairsList.innerHTML = '';
+
+        if (toggleBtn) {
+          toggleBtn.textContent = `Hide ${children.length} items ▲`;
+          toggleBtn.setAttribute('aria-expanded', 'true');
+        }
+
+        const variants = await Promise.all(
+          children.map(child => fetchVariant(child.variantId))
+        );
+
+        children.forEach((child, index) => {
+          const variant = variants[index];
+          const li = document.createElement('li');
+          li.className = 'bundle-pair-item';
+
+          const inner = document.createElement('div');
+          inner.className = 'bundle-pair-item__inner';
+
+          const imgWrap = document.createElement('div');
+          imgWrap.className = 'bundle-pair-item__img-wrap';
+
+          if (variant?.featured_image?.src) {
+            const img = document.createElement('img');
+            img.src = variant.featured_image.src;
+            img.alt = variant.title || '';
+            img.width = 40;
+            img.height = 40;
+            img.loading = 'eager';
+            img.className = 'bundle-pair-item__img';
+            imgWrap.appendChild(img);
+          }
+
+          const info = document.createElement('div');
+          info.className = 'bundle-pair-item__info';
+
+          const label = document.createElement('span');
+          label.className = 'bundle-pair-item__label';
+          label.textContent = `${child.pairLabel}:`;
+
+          const value = document.createElement('span');
+          value.className = 'bundle-pair-item__value';
+          value.textContent = ` ${variant?.title || child.title}`;
+
+          info.appendChild(label);
+          info.appendChild(value);
+          inner.appendChild(imgWrap);
+          inner.appendChild(info);
+          li.appendChild(inner);
+          pairsList.appendChild(li);
+        });
+
+        initToggle(parentEl);
+      }
+    } finally {
+      isHydrating = false;
     }
+  }
+
+  function initToggle(cartItemEl) {
+    const toggleBtn = cartItemEl.querySelector('[data-bundle-toggle]');
+    const pairsList = cartItemEl.querySelector('[data-bundle-pairs-list]');
+    if (!toggleBtn || !pairsList) return;
+
+    const newBtn = toggleBtn.cloneNode(true);
+    toggleBtn.parentNode.replaceChild(newBtn, toggleBtn);
+
+    newBtn.addEventListener('click', () => {
+      const isExpanded = newBtn.getAttribute('aria-expanded') === 'true';
+      const pairCount = pairsList.querySelectorAll('.bundle-pair-item').length;
+      if (isExpanded) {
+        pairsList.style.display = 'none';
+        newBtn.textContent = `Show ${pairCount} items ▼`;
+        newBtn.setAttribute('aria-expanded', 'false');
+      } else {
+        pairsList.style.display = '';
+        newBtn.textContent = `Hide ${pairCount} items ▲`;
+        newBtn.setAttribute('aria-expanded', 'true');
+      }
+    });
+  }
+
+  function handleBundleRemove() {
+    document.addEventListener('click', async (e) => {
+      const removeBtn = e.target.closest('.cart-bundle-remove[data-bundle-key]');
+      if (!removeBtn) return;
+
+      const bundleKey = removeBtn.dataset.bundleKey;
+      if (!bundleKey) return;
+
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      removeBtn.disabled = true;
+      removeBtn.style.opacity = '0.4';
+
+      try {
+        const cart = await fetch('/cart.js').then(r => r.json());
+
+        const updates = {};
+        cart.items.forEach(item => {
+          if (item.properties?._bundleKey === bundleKey) {
+            updates[item.key] = 0;
+          }
+        });
+
+        await fetch('/cart/update.js', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ updates }),
+        });
+
+        const updatedCart = await fetch('/cart.js').then(r => r.json());
+
+        // Full drawer refresh
+        const sectionRes = await fetch('/?section_id=cart-drawer');
+        const html = await sectionRes.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        const newInner = doc.querySelector('.drawer__inner');
+        const oldInner = document.querySelector('.drawer__inner');
+        if (newInner && oldInner) oldInner.innerHTML = newInner.innerHTML;
+
+        const newCount = doc.querySelector('.cart-count-bubble');
+        const oldCount = document.querySelector('.cart-count-bubble');
+        if (newCount && oldCount) oldCount.innerHTML = newCount.innerHTML;
+        else if (oldCount) oldCount.innerHTML = '';
+
+        const cartDrawerEl = document.querySelector('cart-drawer');
+        if (updatedCart.item_count === 0 && cartDrawerEl) {
+          cartDrawerEl.classList.add('is-empty');
+        } else {
+          cartDrawerEl?.classList.remove('is-empty');
+          hydrateBundleItems();
+        }
+
+      } catch (err) {
+        console.error('Bundle remove error:', err);
+        window.location.reload();
+      }
+    }, true);
+  }
+
+  function debouncedHydrate() {
+    clearTimeout(hydrateTimer);
+    hydrateTimer = setTimeout(() => hydrateBundleItems(), 300);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    preloadAllBundleImages();
+    hydrateBundleItems();
+    handleBundleRemove();
   });
 
- window.refreshDrawer = function(cart) {
-    const cartDrawer = document.querySelector('cart-drawer');
-    const drawerItems = document.querySelector('cart-drawer-items');
-    const checkoutBtn = document.querySelector('#CartDrawer-Checkout');
-
-    // Update cart count badge
-    const bubbles = document.querySelectorAll('.cart-count-bubble span:not(.visually-hidden)');
-    bubbles.forEach(b => b.textContent = cart.item_count || '');
-    const cartBubble = document.querySelector('.cart-count-bubble');
-    if (cartBubble) cartBubble.style.display = cart.item_count > 0 ? '' : 'none';
-
-    if (cart.item_count === 0) {
-      cartDrawer?.classList.add('is-empty');
-      drawerItems?.classList.add('is-empty');
-      if (checkoutBtn) checkoutBtn.disabled = true;
-      const wrapper = document.querySelector('.drawer__cart-items-wrapper');
-      if (wrapper) wrapper.innerHTML = '';
-      return;
-    }
-
-    // Filter parents and children
-   const parentItems = cart.items.filter(item =>
-  item.properties?._isChild !== 'true'
-);
-    const childItems = cart.items.filter(item =>
-      item.properties?._isChild === 'true'
-    );
-
-    // Build rows
-    const rows = parentItems.map(item => {
-      const bKey = item.properties?._bundleKey;
-      const isParent = item.properties?._isParent === 'true';
-
-      let childHTML = '';
-      if (isParent && bKey) {
-        const children = childItems.filter(c => c.properties?._bundleKey === bKey);
-        const childRows = children.map(child => `
-          <li style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px;">
-            <img src="${child.image}" width="30" height="30" style="border-radius:4px;">
-            <span>${child.properties?._pairLabel || ''}: ${child.variant_title || ''}</span>
-          </li>
-        `).join('');
-
-        childHTML = `
-          <div class="bundle-expansion-wrapper" style="margin-top:10px;">
-            <button class="bundle-toggle" type="button"
-              onclick="this.nextElementSibling.classList.toggle('hidden')"
-              style="background:none;border:none;text-decoration:underline;cursor:pointer;font-size:12px;padding:0;color:#666;">
-              Hide items ▴
-            </button>
-            <ul class="bundle-child-list" style="list-style:none;padding-left:15px;border-left:2px solid #eee;margin-top:10px;">
-              ${childRows}
-            </ul>
-            <button
-              type="button"
-              class="cart-bundle-remove"
-              data-bundle-key="${bKey}"
-              style="margin-top:8px;background:none;border:none;padding:0;cursor:pointer;color:#999;"
-              aria-label="Remove bundle">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
-                <path d="M14 3h-3.53a3.001 3.001 0 00-5.94 0H1V4h1v11a1 1 0 001 1h10a1 1 0 001-1V4h1V3zM6.5 3a1 1 0 011.97 0H6.5zM12 15H4V4h8v11z" fill="currentColor"></path>
-              </svg>
-            </button>
-          </div>
-        `;
-      }
-
-      const removeBtn = isParent ? '' : `
-        <cart-remove-button data-index="${item.index}">
-          <a href="/cart/change?line=${item.index}&quantity=0"
-            class="button button--tertiary"
-            style="display:flex;align-items:center;justify-content:center;min-width:32px;min-height:32px;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
-              <path d="M14 3h-3.53a3.001 3.001 0 00-5.94 0H1V4h1v11a1 1 0 001 1h10a1 1 0 001-1V4h1V3zM6.5 3a1 1 0 011.97 0H6.5zM12 15H4V4h8v11z" fill="currentColor"></path>
-            </svg>
-          </a>
-        </cart-remove-button>
-      `;
-
-      return `
-        <tr class="cart-item" role="row">
-          <td class="cart-item__media" role="cell">
-            <img src="${item.image}" alt="${item.title}" width="70" height="70" loading="lazy">
-          </td>
-          <td class="cart-item__details" role="cell">
-            <a href="${item.url}" class="cart-item__name h4 break">${item.product_title}</a>
-            <div class="cart-item__price-wrapper">${formatMoney(item.final_line_price)}</div>
-            ${childHTML}
-          </td>
-          <td class="cart-item__totals right" role="cell">
-            ${removeBtn}
-          </td>
-        </tr>
-      `;
-    }).join('');
-
-    // Update total
-    const total = document.querySelector('.totals__total-value');
-    if (total) total.textContent = formatMoney(cart.total_price);
-
-    // Swap tbody
-    const tbody = document.querySelector('.cart-items tbody');
-    if (tbody) {
-      tbody.innerHTML = rows;
-    } else {
-      window.location.reload();
-      return;
-    }
-
-    cartDrawer?.classList.remove('is-empty');
-    drawerItems?.classList.remove('is-empty');
-    if (checkoutBtn) checkoutBtn.disabled = false;
-  }
-
-  function formatMoney(cents) {
-    const symbol = window.Shopify?.currency?.active === 'INR' ? '₹' : 'Rs.';
-    return symbol + ' ' + (cents / 100).toFixed(2);
-  }
+  const observer = new MutationObserver(debouncedHydrate);
+  observer.observe(document.body, { childList: true, subtree: true });
 
 })();
