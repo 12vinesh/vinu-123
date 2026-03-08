@@ -180,67 +180,68 @@ async function hydrateBundleItems() {
   }
 
   function handleBundleRemove() {
-    document.addEventListener('click', async (e) => {
-      const removeBtn = e.target.closest('.cart-bundle-remove[data-bundle-key]');
-      if (!removeBtn) return;
+  document.addEventListener('click', async (e) => {
+    const removeBtn = e.target.closest('.cart-bundle-remove[data-bundle-key]');
+    if (!removeBtn) return;
 
-      const bundleKey = removeBtn.dataset.bundleKey;
-      if (!bundleKey) return;
+    const bundleKey = removeBtn.dataset.bundleKey;
+    if (!bundleKey) return;
 
-      e.preventDefault();
-      e.stopImmediatePropagation();
+    e.preventDefault();
+    e.stopImmediatePropagation();
 
-      removeBtn.disabled = true;
-      removeBtn.style.opacity = '0.4';
+    removeBtn.disabled = true;
+    removeBtn.style.opacity = '0.4';
 
-      try {
-        const cart = await fetch('/cart.js').then(r => r.json());
+    try {
+      const cart = await fetch('/cart.js').then(r => r.json());
 
-        const updates = {};
-        cart.items.forEach(item => {
-          if (item.properties?._bundleKey === bundleKey) {
-            updates[item.key] = 0;
-          }
-        });
+      // Find the single parent line
+      const parentItem = cart.items.find(
+        item => item.properties?._bundleKey === bundleKey
+          && item.properties?._isParent === 'true'
+      );
 
-        await fetch('/cart/update.js', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ updates }),
-        });
+      if (!parentItem) return;
 
-        const updatedCart = await fetch('/cart.js').then(r => r.json());
+      // Remove just that 1 line
+      await fetch('/cart/change.js', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: parentItem.key, quantity: 0 }),
+      });
 
-        // Full drawer refresh
-        const sectionRes = await fetch('/?section_id=cart-drawer');
-        const html = await sectionRes.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
+      const updatedCart = await fetch('/cart.js').then(r => r.json());
 
-        const newInner = doc.querySelector('.drawer__inner');
-        const oldInner = document.querySelector('.drawer__inner');
-        if (newInner && oldInner) oldInner.innerHTML = newInner.innerHTML;
+      // Refresh drawer
+      const sectionRes = await fetch('/?section_id=cart-drawer');
+      const html = await sectionRes.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
 
-        const newCount = doc.querySelector('.cart-count-bubble');
-        const oldCount = document.querySelector('.cart-count-bubble');
-        if (newCount && oldCount) oldCount.innerHTML = newCount.innerHTML;
-        else if (oldCount) oldCount.innerHTML = '';
+      const newInner = doc.querySelector('.drawer__inner');
+      const oldInner = document.querySelector('.drawer__inner');
+      if (newInner && oldInner) oldInner.innerHTML = newInner.innerHTML;
 
-        const cartDrawerEl = document.querySelector('cart-drawer');
-        if (updatedCart.item_count === 0 && cartDrawerEl) {
-          cartDrawerEl.classList.add('is-empty');
-        } else {
-          cartDrawerEl?.classList.remove('is-empty');
-          hydrateBundleItems();
-        }
+      const newCount = doc.querySelector('.cart-count-bubble');
+      const oldCount = document.querySelector('.cart-count-bubble');
+      if (newCount && oldCount) oldCount.innerHTML = newCount.innerHTML;
+      else if (oldCount) oldCount.innerHTML = '';
 
-      } catch (err) {
-        console.error('Bundle remove error:', err);
-        window.location.reload();
+      const cartDrawerEl = document.querySelector('cart-drawer');
+      if (updatedCart.item_count === 0 && cartDrawerEl) {
+        cartDrawerEl.classList.add('is-empty');
+      } else {
+        cartDrawerEl?.classList.remove('is-empty');
+        hydrateBundleItems();
       }
-    }, true);
-  }
 
+    } catch (err) {
+      console.error('Bundle remove error:', err);
+      window.location.reload();
+    }
+  }, true);
+}
   function debouncedHydrate() {
     clearTimeout(hydrateTimer);
     hydrateTimer = setTimeout(() => hydrateBundleItems(), 300);
