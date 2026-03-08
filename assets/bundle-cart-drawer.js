@@ -29,7 +29,15 @@
     } catch(e) {}
   }
 
- function parseBundlePairs(raw) {
+ function getPairSortIndex(label) {
+  if (!label) return 999;
+  const lower = label.toLowerCase();
+  if (lower.includes('free')) return 998;
+  const match = lower.match(/(\d+)/);
+  return match ? parseInt(match[1]) : 997;
+}
+
+function parseBundlePairs(raw) {
   if (!raw) return [];
   return raw
     .split('|')
@@ -37,11 +45,21 @@
     .filter(Boolean)
     .map(part => {
       const segments = part.split(':');
-      const variantId = `${segments[0]}:${segments[1]}`; // gid://shopify/ProductVariant/123
+      // format: gid://shopify/ProductVariant/123:1:1st pair
+      // segments[0] = "gid"
+      // segments[1] = "//shopify/ProductVariant/123"
+      // segments[2] = "1" (quantity)
+      // segments[3+] = "1st pair" (label, may contain colons)
+      const variantId = `${segments[0]}:${segments[1]}`;
       const quantity = parseInt(segments[2]) || 1;
       const label = segments.slice(3).join(':') || '';
-      const numericId = variantId.split('/').pop(); // extract 123
-      return { variantId: numericId, quantity, label, sortIndex: getPairSortIndex(label) };
+      const numericId = variantId.split('/').pop();
+      return {
+        variantId: numericId,
+        quantity,
+        label,
+        sortIndex: getPairSortIndex(label)
+      };
     })
     .filter(item => !!item.variantId);
 }
@@ -60,12 +78,12 @@ async function getCartBundleChildren() {
 
     const children = parseBundlePairs(rawPairs);
     children.sort((a, b) => a.sortIndex - b.sortIndex);
+
     groups[bundleKey] = { children };
   });
 
   return groups;
 }
-
 async function hydrateBundleItems() {
   if (isHydrating) return;
 
