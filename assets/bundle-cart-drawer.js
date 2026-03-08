@@ -44,16 +44,17 @@ function parseBundlePairs(raw) {
     .map(part => part.trim())
     .filter(Boolean)
     .map(part => {
-      const segments = part.split(':');
-      // format: gid://shopify/ProductVariant/123:1:1st pair
-      // segments[0] = "gid"
-      // segments[1] = "//shopify/ProductVariant/123"
-      // segments[2] = "1" (quantity)
-      // segments[3+] = "1st pair" (label, may contain colons)
-      const variantId = `${segments[0]}:${segments[1]}`;
-      const quantity = parseInt(segments[2]) || 1;
-      const label = segments.slice(3).join(':') || '';
-      const numericId = variantId.split('/').pop();
+      // Format: gid://shopify/ProductVariant/123:1:1st pair
+      // Find the variant GID — everything up to the quantity
+      // GID format is always: gid://shopify/ProductVariant/NUMBERS
+      const gidMatch = part.match(/^(gid:\/\/shopify\/ProductVariant\/\d+):(\d+):(.+)$/);
+      if (!gidMatch) return null;
+
+      const fullGid = gidMatch[1];
+      const quantity = parseInt(gidMatch[2]) || 1;
+      const label = gidMatch[3];
+      const numericId = fullGid.split('/').pop();
+
       return {
         variantId: numericId,
         quantity,
@@ -61,7 +62,7 @@ function parseBundlePairs(raw) {
         sortIndex: getPairSortIndex(label)
       };
     })
-    .filter(item => !!item.variantId);
+    .filter(Boolean);
 }
 
 async function getCartBundleChildren() {
