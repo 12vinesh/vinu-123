@@ -123,10 +123,12 @@
       {%- continue -%}
     {%- endif -%}
 
-    {%- assign is_bundle_parent = false -%}
-    {%- if item.properties._isParent == 'true' -%}
-      {%- assign is_bundle_parent = true -%}
-    {%- endif -%}
+ {%- assign is_bundle_parent = false -%}
+{%- for attr in item.properties -%}
+  {%- if attr.first == '_isParent' and attr.last == 'true' -%}
+    {%- assign is_bundle_parent = true -%}
+  {%- endif -%}
+{%- endfor -%}
 
     <tr class="cart-item" id="CartDrawer-Item-{{ item.index | plus: 1 }}" role="row">
 
