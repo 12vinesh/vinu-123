@@ -119,21 +119,27 @@
 
 <tbody role="rowgroup">
   {%- for item in cart.items -%}
-    {%- if item.properties._isChild == 'true' -%}
-      {%- continue -%}
+
+    {%- comment -%} Detect bundle type {%- endcomment -%}
+    {%- assign is_bundle_parent = false -%}
+    {%- assign is_bundle_child = false -%}
+
+    {%- if item.properties._isBundle == 'true' -%}
+      {%- assign is_bundle_parent = true -%}
     {%- endif -%}
 
- {%- assign is_bundle_parent = false -%}
-{%- for attr in item.properties -%}
-  {%- if attr.first == '_isParent' and attr.last == 'true' -%}
-    {%- assign is_bundle_parent = true -%}
-  {%- endif -%}
-{%- endfor -%}
+    {%- if item.properties._isChild == 'true' -%}
+      {%- assign is_bundle_child = true -%}
+    {%- endif -%}
+
+    {%- comment -%} Skip child lines {%- endcomment -%}
+    {%- if is_bundle_child -%}{%- continue -%}{%- endif -%}
 
     <tr class="cart-item" id="CartDrawer-Item-{{ item.index | plus: 1 }}" role="row">
 
+      {%- comment -%} IMAGE {%- endcomment -%}
       <td class="cart-item__media" role="cell" headers="CartDrawer-ColumnProductImage">
-        {% if item.image %}
+        {%- if item.image -%}
           <img
             class="cart-item__image"
             src="{{ item.image | image_url: width: 300 }}"
@@ -142,9 +148,10 @@
             width="150"
             height="{{ 150 | divided_by: item.image.aspect_ratio | ceil }}"
           >
-        {% endif %}
+        {%- endif -%}
       </td>
 
+      {%- comment -%} DETAILS {%- endcomment -%}
       <td class="cart-item__details" role="cell" headers="CartDrawer-ColumnProduct">
         <a href="{{ item.url }}" class="cart-item__name h4 break">
           {{- item.product.title | escape -}}
@@ -152,13 +159,18 @@
 
         {%- if item.original_price != item.final_price -%}
           <div class="cart-item__discounted-prices">
-            <s class="cart-item__old-price product-option">{{- item.original_price | money -}}</s>
-            <strong class="cart-item__final-price product-option">{{ item.final_price | money }}</strong>
+            <s class="cart-item__old-price product-option">
+              {{- item.original_price | money -}}
+            </s>
+            <strong class="cart-item__final-price product-option">
+              {{ item.final_price | money }}
+            </strong>
           </div>
         {%- else -%}
           <div class="product-option">{{ item.original_price | money }}</div>
         {%- endif -%}
 
+        {%- comment -%} BUNDLE PAIRS LIST — only for bundle parent {%- endcomment -%}
         {%- if is_bundle_parent -%}
           <div class="bundle-pairs" data-bundle-key="{{ item.properties._bundleKey }}">
             <button
@@ -169,30 +181,45 @@
             >
               Hide items ▲
             </button>
-            <ul class="bundle-pairs__list list-unstyled" data-bundle-pairs-list></ul>
+            <ul
+              class="bundle-pairs__list list-unstyled"
+              data-bundle-pairs-list
+            ></ul>
           </div>
         {%- endif -%}
       </td>
 
+      {%- comment -%} PRICE {%- endcomment -%}
       <td class="cart-item__totals right" role="cell" headers="CartDrawer-ColumnTotal">
-        <span class="price price--end">{{ item.original_line_price | money }}</span>
+        <span class="price price--end">
+          {{ item.original_line_price | money }}
+        </span>
       </td>
 
+      {%- comment -%} QUANTITY / REMOVE {%- endcomment -%}
       <td class="cart-item__quantity" role="cell" headers="CartDrawer-ColumnQuantity">
         <div class="cart-item__quantity-wrapper">
+
           {%- if is_bundle_parent -%}
+            {%- comment -%} Bundle — show trash icon only, no quantity stepper {%- endcomment -%}
             <button
               type="button"
               class="button button--tertiary cart-bundle-remove"
               data-bundle-key="{{ item.properties._bundleKey }}"
               aria-label="Remove bundle"
             >
-              <span class="svg-wrapper">{{- 'icon-remove.svg' | inline_asset_content -}}</span>
+              <span class="svg-wrapper">
+                {{- 'icon-remove.svg' | inline_asset_content -}}
+              </span>
             </button>
+
           {%- else -%}
+            {%- comment -%} Regular item — quantity stepper + remove {%- endcomment -%}
             <quantity-input class="quantity cart-quantity">
               <button class="quantity__button no-js-hidden" name="minus" type="button">
-                <span class="visually-hidden">{{ 'products.product.quantity.decrease' | t: product: item.product.title | escape }}</span>
+                <span class="visually-hidden">
+                  {{- 'products.product.quantity.decrease' | t: product: item.product.title | escape -}}
+                </span>
                 <span class="svg-wrapper">{{- 'icon-minus.svg' | inline_asset_content -}}</span>
               </button>
               <input
@@ -206,25 +233,47 @@
                 data-index="{{ item.index | plus: 1 }}"
               >
               <button class="quantity__button no-js-hidden" name="plus" type="button">
-                <span class="visually-hidden">{{ 'products.product.quantity.increase' | t: product: item.product.title | escape }}</span>
+                <span class="visually-hidden">
+                  {{- 'products.product.quantity.increase' | t: product: item.product.title | escape -}}
+                </span>
                 <span class="svg-wrapper">{{- 'icon-plus.svg' | inline_asset_content -}}</span>
               </button>
             </quantity-input>
+
             <cart-remove-button
               id="CartDrawer-Remove-{{ item.index | plus: 1 }}"
               data-index="{{ item.index | plus: 1 }}"
             >
-              <button type="button" class="button button--tertiary" aria-label="{{ 'sections.cart.remove_title' | t: title: item.title }}">
+              <button
+                type="button"
+                class="button button--tertiary"
+                aria-label="{{ 'sections.cart.remove_title' | t: title: item.title }}"
+              >
                 <span class="svg-wrapper">{{- 'icon-remove.svg' | inline_asset_content -}}</span>
               </button>
             </cart-remove-button>
+
           {%- endif -%}
+        </div>
+
+        <div id="CartDrawer-LineItemError-{{ item.index | plus: 1 }}" class="cart-item__error" role="alert">
+          <small class="cart-item__error-text"></small>
+          <span class="svg-wrapper">
+            {{- 'icon-error.svg' | inline_asset_content -}}
+          </span>
         </div>
       </td>
 
     </tr>
   {%- endfor -%}
 </tbody>
+```
+
+Key things happening here:
+```
+_isBundle == 'true'  → bundle parent → show pairs list + trash only
+_isChild == 'true'   → skip entirely (hidden)
+everything else      → regular item → quantity stepper + remove
 
                 </table>
               </div>
