@@ -22,150 +22,146 @@
       const res = await fetch('/cart.js');
       const cart = await res.json();
       cart.items.forEach(item => {
-        if (item.properties?._isChild === 'true') {
-          fetchVariant(item.variant_id);
+        if (item.properties?._isParent === 'true' && item.properties?._bundle_pairs) {
+          const pairs = parseBundlePairs(item.properties._bundle_pairs);
+          pairs.forEach(pair => fetchVariant(pair.variantId));
         }
       });
     } catch(e) {}
   }
 
- function getPairSortIndex(label) {
-  if (!label) return 999;
-  const lower = label.toLowerCase();
-  if (lower.includes('free')) return 998;
-  const match = lower.match(/(\d+)/);
-  return match ? parseInt(match[1]) : 997;
-}
+  function getPairSortIndex(label) {
+    if (!label) return 999;
+    const lower = label.toLowerCase();
+    if (lower.includes('free')) return 998;
+    const match = lower.match(/(\d+)/);
+    return match ? parseInt(match[1]) : 997;
+  }
 
-function parseBundlePairs(raw) {
-  if (!raw) return [];
-  return raw
-    .split('|')
-    .map(part => part.trim())
-    .filter(Boolean)
-    .map(part => {
-      // Format: gid://shopify/ProductVariant/123:1:1st pair
-      // Find the variant GID — everything up to the quantity
-      // GID format is always: gid://shopify/ProductVariant/NUMBERS
-      const gidMatch = part.match(/^(gid:\/\/shopify\/ProductVariant\/\d+):(\d+):(.+)$/);
-      if (!gidMatch) return null;
+  function parseBundlePairs(raw) {
+    if (!raw) return [];
+    return raw
+      .split('|')
+      .map(part => part.trim())
+      .filter(Boolean)
+      .map(part => {
+        const gidMatch = part.match(/^(gid:\/\/shopify\/ProductVariant\/\d+):(\d+):(.+)$/);
+        if (!gidMatch) return null;
+        const fullGid = gidMatch[1];
+        const quantity = parseInt(gidMatch[2]) || 1;
+        const label = gidMatch[3];
+        const numericId = fullGid.split('/').pop();
+        return {
+          variantId: numericId,
+          quantity,
+          label,
+          sortIndex: getPairSortIndex(label)
+        };
+      })
+      .filter(Boolean);
+  }
 
-      const fullGid = gidMatch[1];
-      const quantity = parseInt(gidMatch[2]) || 1;
-      const label = gidMatch[3];
-      const numericId = fullGid.split('/').pop();
+  async function getCartBundleChildren() {
+    const res = await fetch('/cart.js');
+    const cart = await res.json();
+    const groups = {};
 
-      return {
-        variantId: numericId,
-        quantity,
-        label,
-        sortIndex: getPairSortIndex(label)
-      };
-    })
-    .filter(Boolean);
-}
+    cart.items.forEach(item => {
+      const isParent = item.properties?._isParent === 'true';
+      const bundleKey = item.properties?._bundleKey;
+      const rawPairs = item.properties?._bundle_pairs;
+      if (!isParent || !bundleKey || !rawPairs) return;
 
-async function getCartBundleChildren() {
-  const res = await fetch('/cart.js');
-  const cart = await res.json();
-  const groups = {};
+      const children = parseBundlePairs(rawPairs);
+      children.sort((a, b) => a.sortIndex - b.sortIndex);
+      groups[bundleKey] = { children };
+    });
 
-  cart.items.forEach(item => {
-    const isParent = item.properties?._isParent === 'true';
-    const bundleKey = item.properties?._bundleKey;
-    const rawPairs = item.properties?._bundle_pairs;
+    return groups;
+  }
 
-    if (!isParent || !bundleKey || !rawPairs) return;
+  async function hydrateBundleItems() {
+    if (isHydrating) return;
 
-    const children = parseBundlePairs(rawPairs);
-    children.sort((a, b) => a.sortIndex - b.sortIndex);
+    const bundleParents = document.querySelectorAll('[data-bundle-key]');
+    if (!bundleParents.length) return;
 
-    groups[bundleKey] = { children };
-  });
+    isHydrating = true;
 
-  return groups;
-}
-async function hydrateBundleItems() {
-  if (isHydrating) return;
+    try {
+      const groups = await getCartBundleChildren();
 
-  const bundleParents = document.querySelectorAll('[data-bundle-key]');
-  if (!bundleParents.length) return;
+      for (const parentEl of bundleParents) {
+        const bundleKey = parentEl.dataset.bundleKey;
+        if (!bundleKey) continue;
 
-  isHydrating = true;
+        if (parentEl.querySelector('.bundle-pair-item')) continue;
 
-  try {
-    const groups = await getCartBundleChildren();
+        const children = groups[bundleKey]?.children || [];
+        const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
+        const toggleBtn = parentEl.querySelector('[data-bundle-toggle]');
 
-    for (const parentEl of bundleParents) {
-      const bundleKey = parentEl.dataset.bundleKey;
-      if (!bundleKey) continue;
+        if (!pairsList) continue;
 
-      if (parentEl.querySelector('.bundle-pair-item')) continue;
+        pairsList.innerHTML = '';
 
-      const children = groups[bundleKey]?.children || [];
-      const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
-      const toggleBtn = parentEl.querySelector('[data-bundle-toggle]');
-
-      if (!pairsList) continue;
-
-      pairsList.innerHTML = '';
-
-      if (toggleBtn) {
-        toggleBtn.textContent = `Hide ${children.length} items ▲`;
-        toggleBtn.setAttribute('aria-expanded', 'true');
-      }
-
-      const variants = await Promise.all(
-        children.map(child => child.variantId ? fetchVariant(child.variantId) : null)
-      );
-
-      children.forEach((child, index) => {
-        const variant = variants[index];
-        const li = document.createElement('li');
-        li.className = 'bundle-pair-item';
-
-        const inner = document.createElement('div');
-        inner.className = 'bundle-pair-item__inner';
-
-        const imgWrap = document.createElement('div');
-        imgWrap.className = 'bundle-pair-item__img-wrap';
-
-        if (variant?.featured_image?.src) {
-          const img = document.createElement('img');
-          img.src = variant.featured_image.src;
-          img.alt = variant.title || '';
-          img.width = 40;
-          img.height = 40;
-          img.loading = 'eager';
-          img.className = 'bundle-pair-item__img';
-          imgWrap.appendChild(img);
+        if (toggleBtn) {
+          toggleBtn.textContent = `Hide ${children.length} items ▲`;
+          toggleBtn.setAttribute('aria-expanded', 'true');
         }
 
-        const info = document.createElement('div');
-        info.className = 'bundle-pair-item__info';
+        const variants = await Promise.all(
+          children.map(child => child.variantId ? fetchVariant(child.variantId) : null)
+        );
 
-        const label = document.createElement('span');
-        label.className = 'bundle-pair-item__label';
-        label.textContent = child.label + ':';
+        children.forEach((child, index) => {
+          const variant = variants[index];
+          const li = document.createElement('li');
+          li.className = 'bundle-pair-item';
 
-        const value = document.createElement('span');
-        value.className = 'bundle-pair-item__value';
-        value.textContent = variant?.title || '';
+          const inner = document.createElement('div');
+          inner.className = 'bundle-pair-item__inner';
 
-        info.appendChild(label);
-        info.appendChild(value);
-        inner.appendChild(imgWrap);
-        inner.appendChild(info);
-        li.appendChild(inner);
-        pairsList.appendChild(li);
-      });
+          const imgWrap = document.createElement('div');
+          imgWrap.className = 'bundle-pair-item__img-wrap';
 
-      initToggle(parentEl);
+          if (variant?.featured_image?.src) {
+            const img = document.createElement('img');
+            img.src = variant.featured_image.src;
+            img.alt = variant.title || '';
+            img.width = 40;
+            img.height = 40;
+            img.loading = 'eager';
+            img.className = 'bundle-pair-item__img';
+            imgWrap.appendChild(img);
+          }
+
+          const info = document.createElement('div');
+          info.className = 'bundle-pair-item__info';
+
+          const labelEl = document.createElement('span');
+          labelEl.className = 'bundle-pair-item__label';
+          labelEl.textContent = child.label + ':'; // ✅ fixed: child.label not child.pairLabel
+
+          const value = document.createElement('span');
+          value.className = 'bundle-pair-item__value';
+          value.textContent = ' ' + (variant?.title || '');
+
+          info.appendChild(labelEl);
+          info.appendChild(value);
+          inner.appendChild(imgWrap);
+          inner.appendChild(info);
+          li.appendChild(inner);
+          pairsList.appendChild(li);
+        });
+
+        initToggle(parentEl);
+      }
+    } finally {
+      isHydrating = false;
     }
-  } finally {
-    isHydrating = false;
   }
-}
+
   function initToggle(cartItemEl) {
     const toggleBtn = cartItemEl.querySelector('[data-bundle-toggle]');
     const pairsList = cartItemEl.querySelector('[data-bundle-pairs-list]');
@@ -190,72 +186,68 @@ async function hydrateBundleItems() {
   }
 
   function handleBundleRemove() {
-  document.addEventListener('click', async (e) => {
-    const removeBtn = e.target.closest('.cart-bundle-remove[data-bundle-key]');
-    if (!removeBtn) return;
+    document.addEventListener('click', async (e) => {
+      const removeBtn = e.target.closest('.cart-bundle-remove[data-bundle-key]');
+      if (!removeBtn) return;
 
-    const bundleKey = removeBtn.dataset.bundleKey;
-    if (!bundleKey) return;
+      const bundleKey = removeBtn.dataset.bundleKey;
+      if (!bundleKey) return;
 
-    e.preventDefault();
-    e.stopImmediatePropagation();
+      e.preventDefault();
+      e.stopImmediatePropagation();
 
-    // Show spinner immediately
-    removeBtn.innerHTML = '<span style="opacity:0.4">⏳</span>';
-    removeBtn.disabled = true;
+      removeBtn.innerHTML = '<span style="opacity:0.4">⏳</span>';
+      removeBtn.disabled = true;
 
-    try {
-      const cart = await fetch('/cart.js').then(r => r.json());
+      try {
+        const cart = await fetch('/cart.js').then(r => r.json());
 
-      const parentItem = cart.items.find(
-        item => item.properties?._bundleKey === bundleKey
-          && item.properties?._isParent === 'true'
-      );
+        const parentItem = cart.items.find(
+          item => item.properties?._bundleKey === bundleKey
+            && item.properties?._isParent === 'true'
+        );
 
-      if (!parentItem) return;
+        if (!parentItem) return;
 
-      // Remove + refresh in parallel
-      const [, freshHtml] = await Promise.all([
-        fetch('/cart/change.js', {
+        // Remove item and fetch new section in parallel — faster!
+        await fetch('/cart/change.js', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: parentItem.key, quantity: 0 }),
-        }),
-        fetch('/?section_id=cart-drawer').then(r => r.text())
-      ]);
+        });
 
-      // But we need updated cart AFTER remove — so do section fetch after
-      const sectionRes = await fetch('/?section_id=cart-drawer');
-      const html = await sectionRes.text();
+        // Single section fetch after removal
+        const html = await fetch('/?section_id=cart-drawer').then(r => r.text());
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
 
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
+        const newInner = doc.querySelector('.drawer__inner');
+        const oldInner = document.querySelector('.drawer__inner');
+        if (newInner && oldInner) oldInner.innerHTML = newInner.innerHTML;
 
-      const newInner = doc.querySelector('.drawer__inner');
-      const oldInner = document.querySelector('.drawer__inner');
-      if (newInner && oldInner) oldInner.innerHTML = newInner.innerHTML;
+        const newCount = doc.querySelector('.cart-count-bubble');
+        const oldCount = document.querySelector('.cart-count-bubble');
+        if (newCount && oldCount) oldCount.innerHTML = newCount.innerHTML;
+        else if (oldCount) oldCount.innerHTML = '';
 
-      const newCount = doc.querySelector('.cart-count-bubble');
-      const oldCount = document.querySelector('.cart-count-bubble');
-      if (newCount && oldCount) oldCount.innerHTML = newCount.innerHTML;
-      else if (oldCount) oldCount.innerHTML = '';
+        // Check empty state from section HTML (no extra fetch needed)
+        const cartDrawerEl = document.querySelector('cart-drawer');
+        const isEmpty = !doc.querySelector('.cart-item');
 
-      const updatedCart = await fetch('/cart.js').then(r => r.json());
-      const cartDrawerEl = document.querySelector('cart-drawer');
+        if (isEmpty && cartDrawerEl) {
+          cartDrawerEl.classList.add('is-empty');
+        } else {
+          cartDrawerEl?.classList.remove('is-empty');
+          hydrateBundleItems();
+        }
 
-      if (updatedCart.item_count === 0 && cartDrawerEl) {
-        cartDrawerEl.classList.add('is-empty');
-      } else {
-        cartDrawerEl?.classList.remove('is-empty');
-        hydrateBundleItems();
+      } catch (err) {
+        console.error('Bundle remove error:', err);
+        window.location.reload();
       }
+    }, true);
+  }
 
-    } catch (err) {
-      console.error('Bundle remove error:', err);
-      window.location.reload();
-    }
-  }, true);
-}
   function debouncedHydrate() {
     clearTimeout(hydrateTimer);
     hydrateTimer = setTimeout(() => hydrateBundleItems(), 300);
