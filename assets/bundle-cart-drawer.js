@@ -29,119 +29,114 @@
     } catch(e) {}
   }
 
-  async function getCartBundleChildren() {
-    const res = await fetch('/cart.js');
-    const cart = await res.json();
-    const groups = {};
-    const pairOrder = ['1st pair', '2nd pair', '3rd pair', '4th pair', 'free pair'];
+ async function getCartBundleChildren() {
+  const res = await fetch('/cart.js');
+  const cart = await res.json();
+  const groups = {};
 
-    cart.items.forEach(item => {
-      const bundleKey = item.properties?._bundleKey;
-      const isChild = item.properties?._isChild === 'true';
-      if (!bundleKey || !isChild) return;
+  cart.items.forEach(item => {
+    // After merge, properties come through as item.properties
+    const isBundle = item.properties?._isBundle === 'true';
+    const bundleKey = item.properties?._bundleKey;
+    if (!isBundle || !bundleKey) return;
 
-      if (!groups[bundleKey]) groups[bundleKey] = { children: [] };
+    const pairCount = parseInt(item.properties?._pairCount || 0);
+    const children = [];
 
-      const label = item.properties?._pairLabel || '';
-      const sortIndex = pairOrder.indexOf(label.toLowerCase());
+    for (let i = 0; i < pairCount; i++) {
+      const raw = item.properties?.[`_pair_${i}`];
+      if (!raw) continue;
+      const [label, variantId] = raw.split('|');
+      children.push({ pairLabel: label, variantId: variantId?.replace('gid://shopify/ProductVariant/', '') });
+    }
 
-      groups[bundleKey].children.push({
-        variantId: item.variant_id,
-        pairLabel: label,
-        title: item.title,
-        sortIndex: sortIndex === -1 ? 99 : sortIndex,
-      });
-    });
+    groups[bundleKey] = { children };
+  });
 
-    Object.keys(groups).forEach(key => {
-      groups[key].children.sort((a, b) => a.sortIndex - b.sortIndex);
-    });
+  return groups;
+}
 
-    return groups;
-  }
+async function hydrateBundleItems() {
+  if (isHydrating) return;
 
-  async function hydrateBundleItems() {
-    if (isHydrating) return;
+  const bundleParents = document.querySelectorAll('[data-bundle-key]');
+  if (!bundleParents.length) return;
 
-    const bundleParents = document.querySelectorAll('[data-bundle-key]');
-    if (!bundleParents.length) return;
+  isHydrating = true;
 
-    isHydrating = true;
+  try {
+    const groups = await getCartBundleChildren();
 
-    try {
-      const groups = await getCartBundleChildren();
+    for (const parentEl of bundleParents) {
+      const bundleKey = parentEl.dataset.bundleKey;
+      if (!bundleKey) continue;
 
-      for (const parentEl of bundleParents) {
-        const bundleKey = parentEl.dataset.bundleKey;
-        if (!bundleKey) continue;
+      if (parentEl.querySelector('.bundle-pair-item')) continue;
 
-        if (parentEl.querySelector('.bundle-pair-item')) continue;
+      const children = groups[bundleKey]?.children || [];
+      const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
+      const toggleBtn = parentEl.querySelector('[data-bundle-toggle]');
 
-        const children = groups[bundleKey]?.children || [];
-        const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
-        const toggleBtn = parentEl.querySelector('[data-bundle-toggle]');
+      if (!pairsList) continue;
 
-        if (!pairsList) continue;
+      pairsList.innerHTML = '';
 
-        pairsList.innerHTML = '';
+      if (toggleBtn) {
+        toggleBtn.textContent = `Hide ${children.length} items ▲`;
+        toggleBtn.setAttribute('aria-expanded', 'true');
+      }
 
-        if (toggleBtn) {
-          toggleBtn.textContent = `Hide ${children.length} items ▲`;
-          toggleBtn.setAttribute('aria-expanded', 'true');
+      const variants = await Promise.all(
+        children.map(child => child.variantId ? fetchVariant(child.variantId) : null)
+      );
+
+      children.forEach((child, index) => {
+        const variant = variants[index];
+        const li = document.createElement('li');
+        li.className = 'bundle-pair-item';
+
+        const inner = document.createElement('div');
+        inner.className = 'bundle-pair-item__inner';
+
+        const imgWrap = document.createElement('div');
+        imgWrap.className = 'bundle-pair-item__img-wrap';
+
+        if (variant?.featured_image?.src) {
+          const img = document.createElement('img');
+          img.src = variant.featured_image.src;
+          img.alt = variant.title || '';
+          img.width = 40;
+          img.height = 40;
+          img.loading = 'eager';
+          img.className = 'bundle-pair-item__img';
+          imgWrap.appendChild(img);
         }
 
-        const variants = await Promise.all(
-          children.map(child => fetchVariant(child.variantId))
-        );
+        const info = document.createElement('div');
+        info.className = 'bundle-pair-item__info';
 
-        children.forEach((child, index) => {
-          const variant = variants[index];
-          const li = document.createElement('li');
-          li.className = 'bundle-pair-item';
+        const label = document.createElement('span');
+        label.className = 'bundle-pair-item__label';
+        label.textContent = child.pairLabel + ':';
 
-          const inner = document.createElement('div');
-          inner.className = 'bundle-pair-item__inner';
+        const value = document.createElement('span');
+        value.className = 'bundle-pair-item__value';
+        value.textContent = variant?.title || '';
 
-          const imgWrap = document.createElement('div');
-          imgWrap.className = 'bundle-pair-item__img-wrap';
+        info.appendChild(label);
+        info.appendChild(value);
+        inner.appendChild(imgWrap);
+        inner.appendChild(info);
+        li.appendChild(inner);
+        pairsList.appendChild(li);
+      });
 
-          if (variant?.featured_image?.src) {
-            const img = document.createElement('img');
-            img.src = variant.featured_image.src;
-            img.alt = variant.title || '';
-            img.width = 40;
-            img.height = 40;
-            img.loading = 'eager';
-            img.className = 'bundle-pair-item__img';
-            imgWrap.appendChild(img);
-          }
-
-          const info = document.createElement('div');
-          info.className = 'bundle-pair-item__info';
-
-          const label = document.createElement('span');
-          label.className = 'bundle-pair-item__label';
-          label.textContent = `${child.pairLabel}:`;
-
-          const value = document.createElement('span');
-          value.className = 'bundle-pair-item__value';
-          value.textContent = ` ${variant?.title || child.title}`;
-
-          info.appendChild(label);
-          info.appendChild(value);
-          inner.appendChild(imgWrap);
-          inner.appendChild(info);
-          li.appendChild(inner);
-          pairsList.appendChild(li);
-        });
-
-        initToggle(parentEl);
-      }
-    } finally {
-      isHydrating = false;
+      initToggle(parentEl);
     }
+  } finally {
+    isHydrating = false;
   }
-
+}
   function initToggle(cartItemEl) {
     const toggleBtn = cartItemEl.querySelector('[data-bundle-toggle]');
     const pairsList = cartItemEl.querySelector('[data-bundle-pairs-list]');
