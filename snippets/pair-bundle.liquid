@@ -585,10 +585,12 @@ document.addEventListener("submit", async function (e) {
       if (variantIds.length === 0) throw new Error('No pair variant IDs');
 const bundleKey = `bundle-${bundleVariantId}-${Date.now()}`;
 
-const pairProperties = {};
-variantIds.forEach((id, i) => {
-  pairProperties[`_pair_${i}`] = `${pairLabels[i]}|${id}`;
-});
+// Encode all pairs into single string: gid:quantity:label|gid:quantity:label
+const bundlePairsValue = variantIds.map((id, i) => {
+  const gid = `gid://shopify/ProductVariant/${id}`;
+  const label = pairLabels[i] || `Pair ${i + 1}`;
+  return `${gid}:1:${label}`;
+}).join('|');
 
 const items = [
   {
@@ -597,12 +599,10 @@ const items = [
     properties: {
       '_bundleKey': bundleKey,
       '_isParent': 'true',
-      '_pairCount': String(variantIds.length),
-      ...pairProperties
+      '_bundle_pairs': bundlePairsValue,
     }
   }
 ];
-
       console.log('Adding items:', JSON.stringify(items, null, 2));
         form.querySelectorAll('input[name^="properties["]').forEach(i => i.remove());
 
