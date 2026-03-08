@@ -124,7 +124,7 @@
     {%- assign is_bundle_parent = false -%}
     {%- assign is_bundle_child = false -%}
 
-    {%- if item.properties._isBundle == 'true' -%}
+    {%- if item.properties._isParent == 'true' -%}
       {%- assign is_bundle_parent = true -%}
     {%- endif -%}
 
