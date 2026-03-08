@@ -29,12 +29,21 @@
     } catch(e) {}
   }
 
- function getPairSortIndex(label) {
-  if (!label) return 999;
-  const lower = label.toLowerCase();
-  if (lower.includes('free')) return 998;
-  const match = lower.match(/(\d+)/);
-  return match ? parseInt(match[1]) : 997;
+ function parseBundlePairs(raw) {
+  if (!raw) return [];
+  return raw
+    .split('|')
+    .map(part => part.trim())
+    .filter(Boolean)
+    .map(part => {
+      const segments = part.split(':');
+      const variantId = `${segments[0]}:${segments[1]}`; // gid://shopify/ProductVariant/123
+      const quantity = parseInt(segments[2]) || 1;
+      const label = segments.slice(3).join(':') || '';
+      const numericId = variantId.split('/').pop(); // extract 123
+      return { variantId: numericId, quantity, label, sortIndex: getPairSortIndex(label) };
+    })
+    .filter(item => !!item.variantId);
 }
 
 async function getCartBundleChildren() {
@@ -45,29 +54,11 @@ async function getCartBundleChildren() {
   cart.items.forEach(item => {
     const isParent = item.properties?._isParent === 'true';
     const bundleKey = item.properties?._bundleKey;
-    const pairCount = parseInt(item.properties?._pairCount || 0);
-    if (!isParent || !bundleKey || pairCount === 0) return;
+    const rawPairs = item.properties?._bundle_pairs;
 
-    const children = [];
+    if (!isParent || !bundleKey || !rawPairs) return;
 
-    for (let i = 0; i < pairCount; i++) {
-      const raw = item.properties?.[`_pair_${i}`];
-      if (!raw) continue;
-
-      const pipeIndex = raw.indexOf('|');
-      const label = raw.substring(0, pipeIndex);
-      const gid = raw.substring(pipeIndex + 1);
-
-      // Extract numeric ID from gid://shopify/ProductVariant/12345
-      const variantId = gid.split('/').pop();
-
-      children.push({
-        pairLabel: label,
-        variantId,
-        sortIndex: getPairSortIndex(label),
-      });
-    }
-
+    const children = parseBundlePairs(rawPairs);
     children.sort((a, b) => a.sortIndex - b.sortIndex);
     groups[bundleKey] = { children };
   });
