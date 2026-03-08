@@ -583,28 +583,24 @@ document.addEventListener("submit", async function (e) {
       const pairLabels = (properties['_bundlePairLabels'] || '').split(',').map(s => s.trim());
 
       if (variantIds.length === 0) throw new Error('No pair variant IDs');
+const bundleKey = `bundle-${bundleVariantId}-${Date.now()}`;
 
-      const bundleKey = `bundle-${bundleVariantId}-${variantIds.join('-')}`;
-     const items = [
+const pairProperties = {};
+variantIds.forEach((id, i) => {
+  pairProperties[`_pair_${i}`] = `${pairLabels[i]}|${id}`;
+});
+
+const items = [
   {
     id: parseInt(bundleVariantId),
     quantity: 1,
     properties: {
       '_bundleKey': bundleKey,
       '_isParent': 'true',
-      '_bundleId': bundleKey,
+      '_pairCount': String(variantIds.length),
+      ...pairProperties
     }
-  },
-  ...variantIds.map((variantId, index) => ({
-    id: parseInt(variantId),
-    quantity: 1,
-    properties: {
-      '_bundleKey': bundleKey,
-      '_isChild': 'true',
-      '_pairLabel': pairLabels[index] || `Pair ${index + 1}`,
-      '_bundleId': bundleKey,
-    }
-  }))
+  }
 ];
 
       console.log('Adding items:', JSON.stringify(items, null, 2));
