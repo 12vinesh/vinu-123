@@ -45,24 +45,29 @@ async function getCartBundleChildren() {
   cart.items.forEach(item => {
     const isParent = item.properties?._isParent === 'true';
     const bundleKey = item.properties?._bundleKey;
-    if (!isParent || !bundleKey) return;
-
     const pairCount = parseInt(item.properties?._pairCount || 0);
+    if (!isParent || !bundleKey || pairCount === 0) return;
+
     const children = [];
 
     for (let i = 0; i < pairCount; i++) {
       const raw = item.properties?.[`_pair_${i}`];
       if (!raw) continue;
-      const [label, gid] = raw.split('|');
-      const variantId = gid ? gid.split('/').pop() : null;
+
+      const pipeIndex = raw.indexOf('|');
+      const label = raw.substring(0, pipeIndex);
+      const gid = raw.substring(pipeIndex + 1);
+
+      // Extract numeric ID from gid://shopify/ProductVariant/12345
+      const variantId = gid.split('/').pop();
+
       children.push({
         pairLabel: label,
         variantId,
-        sortIndex: getPairSortIndex(label)
+        sortIndex: getPairSortIndex(label),
       });
     }
 
-    // Already sorted by Cart Transform but sort here too as safety net
     children.sort((a, b) => a.sortIndex - b.sortIndex);
     groups[bundleKey] = { children };
   });
