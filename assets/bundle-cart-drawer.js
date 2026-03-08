@@ -200,13 +200,13 @@ async function hydrateBundleItems() {
     e.preventDefault();
     e.stopImmediatePropagation();
 
+    // Show spinner immediately
+    removeBtn.innerHTML = '<span style="opacity:0.4">⏳</span>';
     removeBtn.disabled = true;
-    removeBtn.style.opacity = '0.4';
 
     try {
       const cart = await fetch('/cart.js').then(r => r.json());
 
-      // Find the single parent line
       const parentItem = cart.items.find(
         item => item.properties?._bundleKey === bundleKey
           && item.properties?._isParent === 'true'
@@ -214,18 +214,20 @@ async function hydrateBundleItems() {
 
       if (!parentItem) return;
 
-      // Remove just that 1 line
-      await fetch('/cart/change.js', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: parentItem.key, quantity: 0 }),
-      });
+      // Remove + refresh in parallel
+      const [, freshHtml] = await Promise.all([
+        fetch('/cart/change.js', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: parentItem.key, quantity: 0 }),
+        }),
+        fetch('/?section_id=cart-drawer').then(r => r.text())
+      ]);
 
-      const updatedCart = await fetch('/cart.js').then(r => r.json());
-
-      // Refresh drawer
+      // But we need updated cart AFTER remove — so do section fetch after
       const sectionRes = await fetch('/?section_id=cart-drawer');
       const html = await sectionRes.text();
+
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, 'text/html');
 
@@ -238,7 +240,9 @@ async function hydrateBundleItems() {
       if (newCount && oldCount) oldCount.innerHTML = newCount.innerHTML;
       else if (oldCount) oldCount.innerHTML = '';
 
+      const updatedCart = await fetch('/cart.js').then(r => r.json());
       const cartDrawerEl = document.querySelector('cart-drawer');
+
       if (updatedCart.item_count === 0 && cartDrawerEl) {
         cartDrawerEl.classList.add('is-empty');
       } else {
