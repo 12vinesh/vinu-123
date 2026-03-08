@@ -608,45 +608,38 @@ const items = [
 
 
       const response = await fetch('/cart/add.js', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ items }),
-      });
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+  body: JSON.stringify({ items }),
+});
 
-      const data = await response.json();
-      console.log('Cart response:', data);
+const data = await response.json();
+if (data.status) throw new Error(data.description || 'Cart error');
 
-      if (data.status) throw new Error(data.description || 'Cart error');
+// Open drawer immediately while refresh happens in background
+const cartDrawerEl = document.querySelector('cart-drawer');
+if (cartDrawerEl) {
+  cartDrawerEl.classList.remove('is-empty');
+  if (typeof cartDrawerEl.open === 'function') cartDrawerEl.open();
+}
 
-      // Refresh cart drawer
-     fetch('/?sections=cart-drawer')
+// Refresh drawer content in background
+fetch('/?sections=cart-drawer')
   .then(r => r.json())
-  .then(data => {
+  .then(sections => {
     const parser = new DOMParser();
-    const doc = parser.parseFromString(data['cart-drawer'], 'text/html');
-    const newDrawer = doc.querySelector('.drawer__inner');
-    const oldDrawer = document.querySelector('.drawer__inner');
-    if (newDrawer && oldDrawer) oldDrawer.innerHTML = newDrawer.innerHTML;
+    const doc = parser.parseFromString(sections['cart-drawer'], 'text/html');
+
+    const newInner = doc.querySelector('.drawer__inner');
+    const oldInner = document.querySelector('.drawer__inner');
+    if (newInner && oldInner) oldInner.innerHTML = newInner.innerHTML;
+
     const newCount = doc.querySelector('.cart-count-bubble');
     const oldCount = document.querySelector('.cart-count-bubble');
     if (newCount && oldCount) oldCount.innerHTML = newCount.innerHTML;
     if (!newCount && oldCount) oldCount.innerHTML = '';
-    const cartDrawerEl = document.querySelector('cart-drawer');
-    if (cartDrawerEl) {
-      cartDrawerEl.classList.remove('is-empty');
-      if (typeof cartDrawerEl.open === 'function') cartDrawerEl.open();
-    }
   });
-    } catch (err) {
-      console.error('Bundle add error:', err);
-      alert('Error: ' + err.message);
-    } finally {
-  isSubmitting = false;
-  if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Add to cart'; }
-}
-  }, true);
 
-}); // end DOMContentLoaded
 </script>
 {% endif %}
     
