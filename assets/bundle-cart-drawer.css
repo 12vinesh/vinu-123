@@ -59,6 +59,7 @@
   font-size: 12px;
   font-weight: 500;
   color: #000000;
+  line-height: normal;
 }
 
 .bundle-pair-item__value {
