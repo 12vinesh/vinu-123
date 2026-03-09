@@ -207,19 +207,15 @@
       </span>
     </button>
 
-    {%- assign qty_step = 1 -%}
-{%- if is_bundle_parent -%}
-  {%- assign bundle_pairs_raw = item.properties._bundle_pairs -%}
-  {%- assign qty_step = bundle_pairs_raw | split: '|' | size -%}
-{%- endif -%}
+   
 
 <input
   class="quantity__input"
   type="number"
   name="updates[]"
   value="{{ item.quantity }}"
-  min="{{ qty_step }}"
-  step="{{ qty_step }}"
+  min="{{ 1}}"
+  step="{{ 1 }}"
   id="Drawer-quantity-{{ item.index | plus: 1 }}"
   data-index="{{ item.index | plus: 1 }}"
 >
