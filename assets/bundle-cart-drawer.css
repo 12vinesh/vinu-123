@@ -27,9 +27,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 8px;
-  background: #f6f6f7;
-  border-radius: 6px;
 }
 
 .bundle-pair-item__img-wrap {
