@@ -145,7 +145,7 @@
 
           const value = document.createElement('span');
           value.className = 'bundle-pair-item__value';
-          value.textContent = ' ' + (variant?.title || '');
+          value.textContent = variant?.title || '';
 
           info.appendChild(labelEl);
           info.appendChild(value);
