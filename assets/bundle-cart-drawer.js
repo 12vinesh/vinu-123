@@ -147,7 +147,7 @@
 
         const labelEl = document.createElement('span');
         labelEl.className = 'bundle-pair-item__label';
-        labelEl.textContent = `${child.quantity} × Stepzz Grip Socks`;
+     labelEl.textContent = `${child.quantity * parentQty} × Stepzz Grip Socks`;
 
           const value = document.createElement('span');
           value.className = 'bundle-pair-item__value';
