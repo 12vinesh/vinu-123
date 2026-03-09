@@ -200,61 +200,59 @@
       <td class="cart-item__quantity" role="cell" headers="CartDrawer-ColumnQuantity">
         <div class="cart-item__quantity-wrapper">
 
-          {%- if is_bundle_parent -%}
-            {%- comment -%} Bundle — show trash icon only, no quantity stepper {%- endcomment -%}
-            <button
-              type="button"
-              class="button button--tertiary cart-bundle-remove"
-              data-bundle-key="{{ item.properties._bundleKey }}"
-              aria-label="Remove bundle"
-            >
-              <span class="svg-wrapper">
-                {{- 'icon-remove.svg' | inline_asset_content -}}
-              </span>
-            </button>
+  <quantity-input class="quantity cart-quantity">
+    <button class="quantity__button no-js-hidden" name="minus" type="button">
+      <span class="svg-wrapper">
+        {{- 'icon-minus.svg' | inline_asset_content -}}
+      </span>
+    </button>
 
-          {%- else -%}
-            {%- comment -%} Regular item — quantity stepper + remove {%- endcomment -%}
-            <quantity-input class="quantity cart-quantity">
-              <button class="quantity__button no-js-hidden" name="minus" type="button">
-                <span class="visually-hidden">
-                  {{- 'products.product.quantity.decrease' | t: product: item.product.title | escape -}}
-                </span>
-                <span class="svg-wrapper">{{- 'icon-minus.svg' | inline_asset_content -}}</span>
-              </button>
-              <input
-                class="quantity__input"
-                type="number"
-                name="updates[]"
-                value="{{ item.quantity }}"
-                min="0"
-                aria-label="{{ 'products.product.quantity.input_label' | t: product: item.product.title | escape }}"
-                id="Drawer-quantity-{{ item.index | plus: 1 }}"
-                data-index="{{ item.index | plus: 1 }}"
-              >
-              <button class="quantity__button no-js-hidden" name="plus" type="button">
-                <span class="visually-hidden">
-                  {{- 'products.product.quantity.increase' | t: product: item.product.title | escape -}}
-                </span>
-                <span class="svg-wrapper">{{- 'icon-plus.svg' | inline_asset_content -}}</span>
-              </button>
-            </quantity-input>
+    <input
+      class="quantity__input"
+      type="number"
+      name="updates[]"
+      value="{{ item.quantity }}"
+      min="0"
+      id="Drawer-quantity-{{ item.index | plus: 1 }}"
+      data-index="{{ item.index | plus: 1 }}"
+    >
 
-            <cart-remove-button
-              id="CartDrawer-Remove-{{ item.index | plus: 1 }}"
-              data-index="{{ item.index | plus: 1 }}"
-            >
-              <button
-                type="button"
-                class="button button--tertiary"
-                aria-label="{{ 'sections.cart.remove_title' | t: title: item.title }}"
-              >
-                <span class="svg-wrapper">{{- 'icon-remove.svg' | inline_asset_content -}}</span>
-              </button>
-            </cart-remove-button>
+    <button class="quantity__button no-js-hidden" name="plus" type="button">
+      <span class="svg-wrapper">
+        {{- 'icon-plus.svg' | inline_asset_content -}}
+      </span>
+    </button>
+  </quantity-input>
 
-          {%- endif -%}
-        </div>
+  {% if is_bundle_parent %}
+    <button
+      type="button"
+      class="button button--tertiary cart-bundle-remove"
+      data-bundle-key="{{ item.properties._bundleKey }}"
+      aria-label="Remove bundle"
+    >
+      <span class="svg-wrapper">
+        {{- 'icon-remove.svg' | inline_asset_content -}}
+      </span>
+    </button>
+  {% else %}
+    <cart-remove-button
+      id="CartDrawer-Remove-{{ item.index | plus: 1 }}"
+      data-index="{{ item.index | plus: 1 }}"
+    >
+      <button
+        type="button"
+        class="button button--tertiary"
+        aria-label="{{ 'sections.cart.remove_title' | t: title: item.title }}"
+      >
+        <span class="svg-wrapper">
+          {{- 'icon-remove.svg' | inline_asset_content -}}
+        </span>
+      </button>
+    </cart-remove-button>
+  {% endif %}
+
+</div>
 
         <div id="CartDrawer-LineItemError-{{ item.index | plus: 1 }}" class="cart-item__error" role="alert">
           <small class="cart-item__error-text"></small>
