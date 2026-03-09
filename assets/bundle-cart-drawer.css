@@ -51,6 +51,7 @@
 .bundle-pair-item__info {
   display: flex;
   flex-direction: column;
+  padding-left: 7px;
   flex: 1;
 }
 
