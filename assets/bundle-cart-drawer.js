@@ -139,9 +139,9 @@
           const info = document.createElement('div');
           info.className = 'bundle-pair-item__info';
 
-          const labelEl = document.createElement('span');
-          labelEl.className = 'bundle-pair-item__label';
-          labelEl.textContent = child.label + ':'; // ✅ fixed: child.label not child.pairLabel
+        const labelEl = document.createElement('span');
+        labelEl.className = 'bundle-pair-item__label';
+        labelEl.textContent = `${child.quantity} × Stepzz Grip Socks`;
 
           const value = document.createElement('span');
           value.className = 'bundle-pair-item__value';
