@@ -46,6 +46,7 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  border: 1px solid #fff;
 }
 
 .bundle-pair-item__info {
