@@ -152,16 +152,6 @@
  transform: rotate(-48deg);
   z-index: 2;
 }
-
-/* New styles for filtered colors */
-.color_value.hidden {
-  display: none !important;
-}
-
-.color_value.filtered-out {
-  opacity: 0.3;
-  pointer-events: none;
-}
 .selected-value img{
   border: 1px solid black;
 }
@@ -172,203 +162,108 @@
   }
   
 </style>
+
 {% assign product_variant_bundle = product.metafields.custom.product_variants %}
 {% if product_variant_bundle != blank %}
 <div class="wrapper_bundle ">
   {% for metaobject in product.metafields.custom.product_variants.value %}
     <div class="wrapper_pair">
 
-    
       <div class="title_pair">
-     <span class="title_label">{{ metaobject.pair_title }}:</span>
-      <span class="variant-info-display"></span>
+        <span class="title_label">{{ metaobject.pair_title }}:</span>
+        <span class="variant-info-display"></span>
         <span class="accordion-icon accordion-active">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevron-down">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevron-down">
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
-          </span>
-      </div>
-      
- <div class="accordion_content open">
-
-   {% comment %} color swatch {% endcomment %}
-       <div class="swatch-names">COLOUR: <span class="swatch-color"></span> </div>
-      
-      <div class="selected_color">
-    {%- assign shown_colors = '' -%}
-{%- assign first_shown = false -%}
-{%- for selected_color in metaobject.selected_color.value -%}
-  {%- assign inventoryQty = selected_color.inventory_quantity -%}
-  {%- assign colorCode = selected_color.featured_image.alt -%}
-  {%- assign Colortext = selected_color.title | split: ' / ' | last -%}
-  {%- assign maincolor = Colortext | split: ' / ' | last -%}
-  {%- assign color_key = Colortext | downcase | strip -%}
-
-  {%- unless shown_colors contains color_key -%}
-    {%- assign shown_colors = shown_colors | append: color_key | append: '|' -%}
-
-    <div class="color_value {% unless first_shown %}selected-value{% endunless %} {% if inventoryQty <= 0 %}outStock{% endif %}"
-      data-variant-id="{{ selected_color.id }}"
-      color-property="{{ Colortext }}"
-      available-color="{{ Colortext }}">
-
-      <span style="{% if Colortext == 'All White' %}
-          background: linear-gradient(135deg, #f0f0f0 0%, #f0f0f0 50%, #ffffff 50%, #ffffff 100%);
-        {% else %}
-          background-color: {{ colorCode }};
-        {% endif %}"
-        id="selected-value-place"
-        class="selected-value-place"
-        data-value="{{ product.id }}"
-        inventory-qty="{{ inventoryQty }}">
-
-        <i class="fa fa-check fa-check-color" aria-hidden="true"></i>
-
-        <span class="color_title" style="{% if Colortext == 'All White' %}color: transparent;{% else %}color: {{ colorCode }};{% endif %}">
-          {{ maincolor }}
         </span>
-
-        <img class="image_featured"
-          src="{{ selected_color.featured_image | img_url: 'master' }}"
-          style="display: none;">
-
-      </span>
-    </div>
-
-    {%- assign first_shown = true -%}
-  {%- endunless -%}
-{%- endfor -%}
       </div>
-    {% comment %} end color swatch {% endcomment %}
 
- {% comment %} size swatch {% endcomment %}
-      {% comment %} <div class="swatch-names">Size: <span class="swatch-size"></span> </div> {% endcomment %}
-       <div class="selected_size">
-   {%- assign shown_sizes = '' -%}
-{%- for selected_size in metaobject.selected_size.value -%}
-  {%- assign inventorySizeQty = selected_size.inventory_quantity -%}
-  {%- assign sizetext = selected_size.title | split: ' / ' | first | strip -%}
-  {%- assign size_key = sizetext | downcase | strip -%}
+      <div class="accordion_content open">
 
-  {%- unless shown_sizes contains size_key -%}
-    {%- assign shown_sizes = shown_sizes | append: size_key | append: '|' -%}
+        {% comment %} color swatch {% endcomment %}
+        <div class="swatch-names">COLOUR: <span class="swatch-color"></span></div>
 
-    <div class="{% if forloop.first %}selected-value {% endif %}size_value"
-      inventory-qty-size="{{ inventorySizeQty }}"
-      available-size="{{ sizetext }}">
-      {{ sizetext }}
-      <i class="fa fa-check fa-check-size" aria-hidden="true"></i>
+        <div class="selected_color">
+          {%- assign shown_colors = '' -%}
+          {%- assign first_shown = false -%}
+          {%- for selected_color in metaobject.selected_color.value -%}
+            {%- assign inventoryQty = selected_color.inventory_quantity -%}
+            {%- assign colorCode = selected_color.featured_image.alt -%}
+            {%- assign Colortext = selected_color.title | split: ' / ' | last -%}
+            {%- assign maincolor = Colortext | split: ' / ' | last -%}
+            {%- assign color_key = Colortext | downcase | strip -%}
+
+            {%- unless shown_colors contains color_key -%}
+              {%- assign shown_colors = shown_colors | append: color_key | append: '|' -%}
+
+              <div class="color_value {% unless first_shown %}selected-value{% endunless %} {% if inventoryQty <= 0 %}outStock{% endif %}"
+                data-variant-id="{{ selected_color.id }}"
+                color-property="{{ Colortext }}"
+                available-color="{{ Colortext }}">
+
+                <span style="{% if Colortext == 'All White' %}
+                    background: linear-gradient(135deg, #f0f0f0 0%, #f0f0f0 50%, #ffffff 50%, #ffffff 100%);
+                  {% else %}
+                    background-color: {{ colorCode }};
+                  {% endif %}"
+                  id="selected-value-place"
+                  class="selected-value-place"
+                  data-value="{{ product.id }}"
+                  inventory-qty="{{ inventoryQty }}">
+
+                  <i class="fa fa-check fa-check-color" aria-hidden="true"></i>
+
+                  <span class="color_title" style="{% if Colortext == 'All White' %}color: transparent;{% else %}color: {{ colorCode }};{% endif %}">
+                    {{ maincolor }}
+                  </span>
+
+                  <img class="image_featured"
+                    src="{{ selected_color.featured_image | img_url: 'master' }}"
+                    style="display: none;">
+
+                </span>
+              </div>
+
+              {%- assign first_shown = true -%}
+            {%- endunless -%}
+          {%- endfor -%}
+        </div>
+        {% comment %} end color swatch {% endcomment %}
+
+        {% comment %} size swatch {% endcomment %}
+        <div class="selected_size">
+          {%- assign shown_sizes = '' -%}
+          {%- for selected_size in metaobject.selected_size.value -%}
+            {%- assign inventorySizeQty = selected_size.inventory_quantity -%}
+            {%- assign sizetext = selected_size.title | split: ' / ' | first | strip -%}
+            {%- assign size_key = sizetext | downcase | strip -%}
+
+            {%- unless shown_sizes contains size_key -%}
+              {%- assign shown_sizes = shown_sizes | append: size_key | append: '|' -%}
+
+              <div class="{% if forloop.first %}selected-value {% endif %}size_value"
+                inventory-qty-size="{{ inventorySizeQty }}"
+                available-size="{{ sizetext }}">
+                {{ sizetext }}
+                <i class="fa fa-check fa-check-size" aria-hidden="true"></i>
+              </div>
+
+            {%- endunless -%}
+          {%- endfor -%}
+        </div>
+        {% comment %} end size swatch {% endcomment %}
+
+      </div>
+
     </div>
-
-  {%- endunless -%}
-{%- endfor -%}
-       </div>
-    {% comment %}end  size swatch {% endcomment %}
+  {% endfor %}
 </div>
-      
-    </div>
-      {% endfor %}
-      </div>
 {% endif %}
-    
-{% if product.metafields.custom.product_variants != blank  %} 
+
+{% if product.metafields.custom.product_variants != blank %}
 <script>
-/** ----------------------------------------------------------
- * VARIANT MAP — must be outside DOMContentLoaded
- * ---------------------------------------------------------- */
-//This block collects all variants data from Shopify and stores them in a JavaScript array.
- const variantMap = {};
 
-const allVariantData = [
-  {%- for metaobject in product.metafields.custom.product_variants.value -%}
-    {%- for variant in metaobject.selected_color.value -%}
-      {
-        pairIndex: {{ forloop.parentloop.index0 }},
-        variantId: "{{ variant.id }}",
-        colour: "{{ variant.title | split: ' / ' | last | strip }}",
-        size: "{{ variant.title | split: ' / ' | first | strip }}",
-        inventory: {{ variant.inventory_quantity }},
-      },
-    {%- endfor -%}
-  {%- endfor -%}
-];
-
-allVariantData.forEach(v => {
-  variantMap[`${v.pairIndex}|${v.colour}|${v.size}`] = v;
-});
-
-function getVariantForColourSize(pairIndex, colour, size) {
-  return variantMap[`${pairIndex}|${colour}|${size}`] || null;
-}
-
-function filterColorsBySelectedSize(variantBlock) {
-  const pairIndex = Array.from(document.querySelectorAll('.wrapper_pair')).indexOf(variantBlock);
-  const sizeGroup = variantBlock.querySelector(".selected_size");
-  const colorGroup = variantBlock.querySelector(".selected_color");
-  const selectedSize = sizeGroup.querySelector(".selected-value")?.getAttribute("available-size");
-
-  if (!selectedSize) return;
-
-  const currentSelectedColor = colorGroup.querySelector(".selected-value");
-
-  colorGroup.querySelectorAll(".color_value").forEach((colorOption) => {
-    const colorName = colorOption.getAttribute("color-property");
-    const variant = getVariantForColourSize(pairIndex, colorName, selectedSize);
-
-    if (!variant) {
-      colorOption.classList.add("hidden");
-    } else {
-      colorOption.classList.remove("hidden");
-      colorOption.setAttribute("data-variant-id", variant.variantId);
-      const place = colorOption.querySelector(".selected-value-place");
-      if (place) place.setAttribute("inventory-qty", variant.inventory);
-      colorOption.classList.toggle("outStock", variant.inventory <= 0);
-    }
-  });
-
-  if (currentSelectedColor?.classList.contains("hidden")) {
-    currentSelectedColor.classList.remove("selected-value");
-    const firstAvailable = colorGroup.querySelector(".color_value:not(.hidden):not(.outStock)");
-    if (firstAvailable) firstAvailable.classList.add("selected-value");
-  }
-}
-
-function updateSizeInventoryFromColor(variantBlock) {
-  const pairIndex = Array.from(document.querySelectorAll('.wrapper_pair')).indexOf(variantBlock);
-  const colorGroup = variantBlock.querySelector(".selected_color");
-  const sizeGroup = variantBlock.querySelector(".selected_size");
-  const selectedColorEl = colorGroup.querySelector(".selected-value");
-  const selectedColor = selectedColorEl?.getAttribute("color-property");
-  const selectedSize = sizeGroup.querySelector(".selected-value")?.getAttribute("available-size");
-
-  if (!selectedColor) return;
-
-  sizeGroup.querySelectorAll(".size_value").forEach((sizeOption) => {
-    const sizeValue = sizeOption.getAttribute("available-size");
-    const variant = getVariantForColourSize(pairIndex, selectedColor, sizeValue);
-    if (!variant) {
-      sizeOption.classList.add("outStock");
-      sizeOption.setAttribute("inventory-qty-size", "0");
-    } else {
-      sizeOption.classList.toggle("outStock", variant.inventory <= 0);
-      sizeOption.setAttribute("inventory-qty-size", variant.inventory);
-    }
-  });
-
-  if (selectedSize && selectedColor && selectedColorEl) {
-    const variant = getVariantForColourSize(pairIndex, selectedColor, selectedSize);
-    if (variant) {
-      selectedColorEl.setAttribute("data-variant-id", variant.variantId);
-      const place = selectedColorEl.querySelector(".selected-value-place");
-      if (place) place.setAttribute("inventory-qty", variant.inventory);
-    }
-  }
-}
-
-/** ----------------------------------------------------------
- * DOM READY
- * ---------------------------------------------------------- */
- 
 document.addEventListener("DOMContentLoaded", function () {
 
   /** SECTION 1: Accordion */
@@ -410,7 +305,17 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  /** SECTION 5: Collect Properties */
+  /** SECTION 5: Collect Properties
+   *
+   * Reads the customer's current selection straight from the DOM.
+   * No variant lookup needed — Liquid already stamped data-variant-id
+   * on each colour swatch at render time, so whichever swatch has
+   * .selected-value holds the correct variant ID for that colour.
+   *
+   * Produces two hidden properties used by buildBundleCartPayload():
+   *   _bundlePairIds    — "variantId1,variantId2,..."
+   *   _bundlePairLabels — "1st pair,2nd pair,..."
+   */
   function collectLineItemProperties() {
     const properties = {};
     const variantIds = [];
@@ -474,7 +379,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
   window.updatePropertiesInForm = updatePropertiesInForm;
 
-  /** SECTION 7: Event Listeners per Pair */
+  /** SECTION 7: Event Listeners per Pair
+   *
+   * Original colour and size click logic — completely unchanged.
+   * Clicking a colour swatch: removes .selected-value from all swatches,
+   *   adds it to the clicked one.
+   * Clicking a size button: removes .selected-value from all size buttons,
+   *   adds it to the clicked one.
+   * updateDisplay() then refreshes the title bar summary text.
+   */
   document.querySelectorAll(".wrapper_pair").forEach((variantBlock) => {
     const infoDisplay = variantBlock.querySelector(".variant-info-display");
     const selectedColorText = variantBlock.querySelector(".swatch-color");
@@ -490,9 +403,7 @@ document.addEventListener("DOMContentLoaded", function () {
       updatePropertiesInForm();
     }
 
-    // Initial setup
-    filterColorsBySelectedSize(variantBlock);
-    updateSizeInventoryFromColor(variantBlock);
+    // Run once on page load to populate the title bar
     updateDisplay();
 
     // Colour click
@@ -500,12 +411,11 @@ document.addEventListener("DOMContentLoaded", function () {
       const clickedEl = e.target.closest(".selected-value-place");
       if (!clickedEl) return;
       const colorValueEl = clickedEl.closest(".color_value");
-      if (colorValueEl?.classList.contains("outStock") || colorValueEl?.classList.contains("hidden")) return;
+      if (colorValueEl?.classList.contains("outStock")) return;
       const inventoryQty = parseInt(clickedEl.getAttribute("inventory-qty")) || 0;
       if (inventoryQty <= 0) return;
       colorGroup.querySelectorAll(".selected-value").forEach(el => el.classList.remove("selected-value"));
       colorValueEl.classList.add("selected-value");
-      updateSizeInventoryFromColor(variantBlock);
       updateDisplay();
     });
 
@@ -513,150 +423,91 @@ document.addEventListener("DOMContentLoaded", function () {
     sizeGroup.addEventListener("click", (e) => {
       const clicked = e.target.closest(".size_value");
       if (!clicked || clicked.classList.contains("outStock")) return;
-
-      const clickedSize = clicked.getAttribute("available-size");
-      const pairIndex = Array.from(document.querySelectorAll('.wrapper_pair')).indexOf(variantBlock);
-
-      // Check if any colour has inventory for this size
-      const hasAvailableColor = allVariantData.some(
-        v => v.pairIndex === pairIndex && v.size === clickedSize && v.inventory > 0
-      );
-      if (!hasAvailableColor) return;
-
-      const currentColor = colorGroup.querySelector(".selected-value")?.getAttribute("color-property");
-
       sizeGroup.querySelectorAll(".selected-value").forEach(el => el.classList.remove("selected-value"));
       clicked.classList.add("selected-value");
-
-      filterColorsBySelectedSize(variantBlock);
-
-      // Try to keep current colour
-      if (currentColor) {
-        const reselectColor = colorGroup.querySelector(
-          `[color-property="${currentColor}"]:not(.hidden):not(.outStock)`
-        );
-        if (reselectColor) {
-          colorGroup.querySelectorAll(".selected-value").forEach(el => el.classList.remove("selected-value"));
-          reselectColor.classList.add("selected-value");
-          updateSizeInventoryFromColor(variantBlock);
-          updateDisplay();
-          return;
-        }
-      }
-
-      // Pick first available colour for this size
-      const firstAvailable = colorGroup.querySelector(".color_value:not(.hidden):not(.outStock)");
-      if (firstAvailable) {
-        colorGroup.querySelectorAll(".selected-value").forEach(el => el.classList.remove("selected-value"));
-        firstAvailable.classList.add("selected-value");
-        updateSizeInventoryFromColor(variantBlock);
-      }
-
       updateDisplay();
     });
   });
 
-  /** SECTION 8: Init + Submit */
+  /** SECTION 8: Init */
   checkInventory();
   updatePropertiesInForm();
 
-  // ============================================================
-  // [NEW] buildBundleCartPayload()
-  // ------------------------------------------------------------
-  // WHY THIS FUNCTION EXISTS:
-  //   The original submit handler had all the bundle-encoding
-  //   logic written inline inside it. That made the handler long
-  //   and hard to read during a code review.
+  // ── NEW FUNCTION ──────────────────────────────────────────────────────────
+  // buildBundleCartPayload(properties, bundleVariantId)
   //
-  //   This function extracts ONLY the "what do we send to the
-  //   cart API?" question into one place. The submit handler
-  //   below stays unchanged — it just calls this function and
-  //   uses the result.
+  // WHY THIS EXISTS:
+  //   The original code injected line item properties into the form and let
+  //   the normal Shopify form POST happen. For bundle support we need to send
+  //   two extra hidden properties to the backend so the Cart Transform
+  //   Function (cart_transform_run.js) can expand the bundle at checkout:
   //
-  // WHAT IT DOES:
-  //   1. Reads the pair variant IDs and labels that
-  //      collectLineItemProperties() already gathered.
-  //   2. Builds a unique bundleKey so this specific bundle add
-  //      can be identified later (used by cart drawer + remove).
-  //   3. Encodes all pairs into a single _bundle_pairs string.
-  //      Format: "gid://shopify/ProductVariant/123:1:1st pair|..."
-  //      One string instead of many properties because the Cart
-  //      Transform GraphQL can only query one attribute at a time —
-  //      a single string scales to any number of pairs with no
-  //      code changes.
-  //   4. Returns the `items` array ready to POST to /cart/add.js.
+  //   _bundleKey    — unique ID for this add, used by the cart drawer JS and
+  //                   the remove button to find this exact line later.
   //
-  // WHAT IT DOES NOT CHANGE:
-  //   - collectLineItemProperties() is called exactly as before.
-  //   - The fetch, drawer open, and error handling are all still
-  //     in the submit handler exactly as they were.
+  //   _bundle_pairs — all pair selections in one pipe-separated string:
+  //                   "gid://shopify/ProductVariant/ID:qty:label|..."
+  //                   One string = one GraphQL field in the Cart Transform
+  //                   query, and it scales to any number of pairs with no
+  //                   code changes.
   //
-  // @param {object} properties  — output of collectLineItemProperties()
-  // @param {string} bundleVariantId — the Elite Pack variant ID from the form
-  // @returns {object} { items, bundleKey } or throws if data missing
-  // ============================================================
+  // WHAT IT READS:
+  //   _bundlePairIds and _bundlePairLabels from the properties object that
+  //   collectLineItemProperties() already built. No DOM access here.
+  //
+  // WHAT IT RETURNS:
+  //   { items } — the array to POST directly to /cart/add.js
+  //   One item only: the parent bundle line. No child lines go into the cart.
+  //   Children only appear at checkout when Cart Transform expands this line.
+  // ─────────────────────────────────────────────────────────────────────────
   function buildBundleCartPayload(properties, bundleVariantId) {
 
-    // Pull the comma-separated pair variant IDs that
-    // collectLineItemProperties() stored in a hidden property.
+    // Split the comma-separated IDs that collectLineItemProperties() built
     const variantIds = (properties['_bundlePairIds'] || '')
       .split(',')
       .map(s => s.trim())
       .filter(Boolean);
 
-    // Pull the matching pair labels (e.g. "1st pair", "Free pair").
+    // Split the matching labels — same order as variantIds
     const pairLabels = (properties['_bundlePairLabels'] || '')
       .split(',')
       .map(s => s.trim());
 
     if (variantIds.length === 0) throw new Error('No pair variant IDs');
 
-    // Unique key for this bundle add. Timestamp makes it impossible
-    // to collide even if the customer adds the same bundle twice
-    // in the same session.
+    // Timestamp ensures this key is unique even if the customer adds twice
     const bundleKey = `bundle-${bundleVariantId}-${Date.now()}`;
 
-    // Encode all pairs into one pipe-separated string.
-    // Each segment: "gid://shopify/ProductVariant/{id}:1:{label}"
-    // The Cart Transform function (cart_transform_run.js) reads this
-    // single string and expands it at checkout into individual lines.
+    // Encode every pair into one string the Cart Transform can read.
+    // Format per segment: "gid://shopify/ProductVariant/ID:1:label"
     const bundlePairsValue = variantIds.map((id, i) => {
       const gid = `gid://shopify/ProductVariant/${id}`;
       const label = pairLabels[i] || `Pair ${i + 1}`;
       return `${gid}:1:${label}`;
     }).join('|');
 
-    // We add ONE cart line — the bundle parent only.
-    // No child lines are added to the cart. Children are
-    // virtual and only appear at checkout via Cart Transform lineExpand.
     const items = [
       {
         id: parseInt(bundleVariantId),
         quantity: 1,
         properties: {
-          '_bundleKey': bundleKey,       // ties this line to the bundle drawer display
-          '_isParent': 'true',           // lets cart-drawer.liquid and bundle-cart-drawer.js identify this line
-          '_bundle_pairs': bundlePairsValue, // full pair data read by Cart Transform at checkout
+          '_bundleKey': bundleKey,
+          '_isParent': 'true',
+          '_bundle_pairs': bundlePairsValue,
         }
       }
     ];
 
-    return { items, bundleKey };
+    return { items };
   }
-  // ============================================================
-  // [END NEW] buildBundleCartPayload
-  // ============================================================
-
+  // ── END NEW FUNCTION ──────────────────────────────────────────────────────
 
   let isSubmitting = false;
 
-  // ------------------------------------------------------------
-  // Submit handler — NO LOGIC CHANGED from v1.
-  // The only difference is the inline bundle-encoding block has
-  // been replaced with a call to buildBundleCartPayload() above.
-  // Everything else (preventDefault, fetch, drawer open, error
-  // handling, finally block) is byte-for-byte identical.
-  // ------------------------------------------------------------
+  // Submit handler.
+  // Intercepts the form submit, calls buildBundleCartPayload() for the
+  // cart payload, then POSTs to /cart/add.js instead of the normal form POST.
+  // Drawer open and refresh logic unchanged from original approach.
   document.addEventListener("submit", async function (e) {
     const form = e.target.closest('form[action*="/cart/add"]');
     if (!form) return;
@@ -675,22 +526,19 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     try {
-      // SECTION 8a — collect what the customer selected (unchanged from v1)
+      // Collect current selections from the DOM
       const properties = collectLineItemProperties();
       const bundleVariantId = form.querySelector('[name="id"]')?.value;
       if (!bundleVariantId) throw new Error('No bundle variant ID');
 
-      // SECTION 8b — [NEW] build the cart payload using the extracted function.
-      // Previously this block of code lived inline here. It is now in
-      // buildBundleCartPayload() directly above. Same logic, same output.
+      // Build the cart payload with bundleKey + bundle_pairs encoding
       const { items } = buildBundleCartPayload(properties, bundleVariantId);
 
       console.log('Adding bundle:', JSON.stringify(items, null, 2));
 
-      // SECTION 8c — clean up any leftover hidden form inputs (unchanged from v1)
+      // Remove leftover hidden form inputs
       form.querySelectorAll('input[name^="properties["]').forEach(i => i.remove());
 
-      // SECTION 8d — POST to Shopify cart API (unchanged from v1)
       const response = await fetch('/cart/add.js', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -702,14 +550,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (data.status) throw new Error(data.description || 'Cart error');
 
-      // SECTION 8e — open drawer immediately, feels instant (unchanged from v1)
+      // Open drawer immediately — feels instant to the customer
       const cartDrawerEl = document.querySelector('cart-drawer');
       if (cartDrawerEl) {
         cartDrawerEl.classList.remove('is-empty');
         if (typeof cartDrawerEl.open === 'function') cartDrawerEl.open();
       }
 
-      // SECTION 8f — refresh drawer content in background, non-blocking (unchanged from v1)
+      // Refresh drawer HTML in the background — non-blocking
       fetch('/?sections=cart-drawer')
         .then(r => r.json())
         .then(sections => {
