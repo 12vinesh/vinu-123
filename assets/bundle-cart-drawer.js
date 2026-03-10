@@ -94,10 +94,13 @@
       for (const parentEl of bundleParents) {
         const bundleKey = parentEl.dataset.bundleKey;
         if (!bundleKey) continue;
-
-        if (parentEl.querySelector('.bundle-pair-item')) {
-          initToggle(parentEl);
-          continue;}
+      //CHANGE
+      // If bundle items already exist, we still need to ensure the toggle works
+      // because the cart drawer may have been re-rendered via AJAX
+       if (parentEl.querySelector('.bundle-pair-item')) {
+             initToggle(parentEl); // Reattach toggle click event
+             continue; // Skip rebuilding bundle items again
+        }
 
         const children = groups[bundleKey]?.children || [];
         const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
@@ -176,9 +179,9 @@
     if (!toggleBtn || !pairsList) return;
 
     if (toggleBtn.dataset.toggleInitialized === "true") return;
-toggleBtn.dataset.toggleInitialized = "true";
+       toggleBtn.dataset.toggleInitialized = "true";
 
-toggleBtn.addEventListener('click', () => {
+      toggleBtn.addEventListener('click', () => {
       const isExpanded = newBtn.getAttribute('aria-expanded') === 'true';
       const pairCount = pairsList.querySelectorAll('.bundle-pair-item').length;
       if (isExpanded) {
