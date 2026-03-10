@@ -95,7 +95,9 @@
         const bundleKey = parentEl.dataset.bundleKey;
         if (!bundleKey) continue;
 
-        if (parentEl.querySelector('.bundle-pair-item')) continue;
+        if (parentEl.querySelector('.bundle-pair-item')) {
+          initToggle(parentEl);
+          continue;}
 
         const children = groups[bundleKey]?.children || [];
         const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
