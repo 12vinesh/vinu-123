@@ -175,10 +175,10 @@
     const pairsList = cartItemEl.querySelector('[data-bundle-pairs-list]');
     if (!toggleBtn || !pairsList) return;
 
-    const newBtn = toggleBtn.cloneNode(true);
-    toggleBtn.parentNode.replaceChild(newBtn, toggleBtn);
+    if (toggleBtn.dataset.toggleInitialized === "true") return;
+toggleBtn.dataset.toggleInitialized = "true";
 
-    newBtn.addEventListener('click', () => {
+toggleBtn.addEventListener('click', () => {
       const isExpanded = newBtn.getAttribute('aria-expanded') === 'true';
       const pairCount = pairsList.querySelectorAll('.bundle-pair-item').length;
       if (isExpanded) {
