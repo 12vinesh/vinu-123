@@ -371,7 +371,7 @@
   const properties = {};
   const variantIds = [];
   const pairLabels = [];
-  const bundleKey = crypto.randomUUID();;//bundle key for grouping
+  const bundleKey = crypto.randomUUID();;//generate bundle key for grouping
 
   const wrapperPairs = document.querySelectorAll(".wrapper_pair");
 
@@ -418,7 +418,7 @@
 
    // NEW: mark this product as bundle parent
     properties['_isParent'] = 'true';
-    properties['_bundleKey'] = bundleKey;
+    properties['_bundleKey'] = bundleKey;//asign bundle key
    // ↑ Cart Transform will check this to expand bundle items
 
 
