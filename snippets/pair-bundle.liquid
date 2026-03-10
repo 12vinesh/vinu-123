@@ -410,12 +410,27 @@
       pairLabels.push(cleanTitle);
     }
   }); // ← closing forEach
+   /** ----------------------------------------------------------
+   * Changes made for cart transform
+   * ---------------------------------------------------------- */
+  // Adding single combined attribute for Cart Transform
 
-  // Add single combined attribute for Cart Transform
+   // NEW: mark this product as bundle parent
+    properties['_isParent'] = 'true';
+   // ↑ Cart Transform will check this to expand bundle items
+
+
   if (variantIds.length > 0) {
-    properties['_bundlePairIds'] = variantIds.join(',');
-    properties['_bundlePairLabels'] = pairLabels.join(',');
-  }
+
+  const bundlePairs = variantIds.map((id, index) => {
+    const quantity = 1; // quantity per bundle item
+    const label = pairLabels[index];
+
+    return `gid://shopify/ProductVariant/${id}:${quantity}:${label}`;
+  });
+
+  properties['_bundle_pairs'] = bundlePairs.join('|');
+}
 
   return properties;
 }
