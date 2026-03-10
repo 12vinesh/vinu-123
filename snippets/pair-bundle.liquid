@@ -449,7 +449,7 @@
     Object.entries(properties).forEach(([key, value]) => {
       const input = document.createElement("input");
       input.type = "hidden";
-      input.name = `properties[${key.replace(/:/g, "")}]`;
+      input.name = `properties[${key}]`;// change -> no need to remove ":" already done in collectLineItemProperties()
       input.value = value;
       form.appendChild(input);
     });
