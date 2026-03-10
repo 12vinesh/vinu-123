@@ -399,7 +399,7 @@
       const cleanTitle = pairTitle.replace(":", "").trim();
 
       // Visible property — shows in checkout
-      properties[`_${cleanTitle}`] = `_${selectedColor} (_${selectedSize})`;//CHANGE->hidden colour and size
+      properties[cleanTitle] = `${selectedColor} (${selectedSize})`;
 
       // Hidden property — underscore hides from checkout display
       if (variantId) {
