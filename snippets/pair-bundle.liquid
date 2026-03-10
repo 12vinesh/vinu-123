@@ -560,8 +560,103 @@ document.addEventListener("DOMContentLoaded", function () {
   checkInventory();
   updatePropertiesInForm();
 
+  // ============================================================
+  // [NEW] buildBundleCartPayload()
+  // ------------------------------------------------------------
+  // WHY THIS FUNCTION EXISTS:
+  //   The original submit handler had all the bundle-encoding
+  //   logic written inline inside it. That made the handler long
+  //   and hard to read during a code review.
+  //
+  //   This function extracts ONLY the "what do we send to the
+  //   cart API?" question into one place. The submit handler
+  //   below stays unchanged — it just calls this function and
+  //   uses the result.
+  //
+  // WHAT IT DOES:
+  //   1. Reads the pair variant IDs and labels that
+  //      collectLineItemProperties() already gathered.
+  //   2. Builds a unique bundleKey so this specific bundle add
+  //      can be identified later (used by cart drawer + remove).
+  //   3. Encodes all pairs into a single _bundle_pairs string.
+  //      Format: "gid://shopify/ProductVariant/123:1:1st pair|..."
+  //      One string instead of many properties because the Cart
+  //      Transform GraphQL can only query one attribute at a time —
+  //      a single string scales to any number of pairs with no
+  //      code changes.
+  //   4. Returns the `items` array ready to POST to /cart/add.js.
+  //
+  // WHAT IT DOES NOT CHANGE:
+  //   - collectLineItemProperties() is called exactly as before.
+  //   - The fetch, drawer open, and error handling are all still
+  //     in the submit handler exactly as they were.
+  //
+  // @param {object} properties  — output of collectLineItemProperties()
+  // @param {string} bundleVariantId — the Elite Pack variant ID from the form
+  // @returns {object} { items, bundleKey } or throws if data missing
+  // ============================================================
+  function buildBundleCartPayload(properties, bundleVariantId) {
+
+    // Pull the comma-separated pair variant IDs that
+    // collectLineItemProperties() stored in a hidden property.
+    const variantIds = (properties['_bundlePairIds'] || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    // Pull the matching pair labels (e.g. "1st pair", "Free pair").
+    const pairLabels = (properties['_bundlePairLabels'] || '')
+      .split(',')
+      .map(s => s.trim());
+
+    if (variantIds.length === 0) throw new Error('No pair variant IDs');
+
+    // Unique key for this bundle add. Timestamp makes it impossible
+    // to collide even if the customer adds the same bundle twice
+    // in the same session.
+    const bundleKey = `bundle-${bundleVariantId}-${Date.now()}`;
+
+    // Encode all pairs into one pipe-separated string.
+    // Each segment: "gid://shopify/ProductVariant/{id}:1:{label}"
+    // The Cart Transform function (cart_transform_run.js) reads this
+    // single string and expands it at checkout into individual lines.
+    const bundlePairsValue = variantIds.map((id, i) => {
+      const gid = `gid://shopify/ProductVariant/${id}`;
+      const label = pairLabels[i] || `Pair ${i + 1}`;
+      return `${gid}:1:${label}`;
+    }).join('|');
+
+    // We add ONE cart line — the bundle parent only.
+    // No child lines are added to the cart. Children are
+    // virtual and only appear at checkout via Cart Transform lineExpand.
+    const items = [
+      {
+        id: parseInt(bundleVariantId),
+        quantity: 1,
+        properties: {
+          '_bundleKey': bundleKey,       // ties this line to the bundle drawer display
+          '_isParent': 'true',           // lets cart-drawer.liquid and bundle-cart-drawer.js identify this line
+          '_bundle_pairs': bundlePairsValue, // full pair data read by Cart Transform at checkout
+        }
+      }
+    ];
+
+    return { items, bundleKey };
+  }
+  // ============================================================
+  // [END NEW] buildBundleCartPayload
+  // ============================================================
+
+
   let isSubmitting = false;
 
+  // ------------------------------------------------------------
+  // Submit handler — NO LOGIC CHANGED from v1.
+  // The only difference is the inline bundle-encoding block has
+  // been replaced with a call to buildBundleCartPayload() above.
+  // Everything else (preventDefault, fetch, drawer open, error
+  // handling, finally block) is byte-for-byte identical.
+  // ------------------------------------------------------------
   document.addEventListener("submit", async function (e) {
     const form = e.target.closest('form[action*="/cart/add"]');
     if (!form) return;
@@ -580,47 +675,22 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     try {
+      // SECTION 8a — collect what the customer selected (unchanged from v1)
       const properties = collectLineItemProperties();
       const bundleVariantId = form.querySelector('[name="id"]')?.value;
       if (!bundleVariantId) throw new Error('No bundle variant ID');
 
-      const variantIds = (properties['_bundlePairIds'] || '')
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean);
-
-      const pairLabels = (properties['_bundlePairLabels'] || '')
-        .split(',')
-        .map(s => s.trim());
-
-      if (variantIds.length === 0) throw new Error('No pair variant IDs');
-
-      const bundleKey = `bundle-${bundleVariantId}-${Date.now()}`;
-
-      // Encode all pairs into single string: gid:quantity:label|gid:quantity:label
-      const bundlePairsValue = variantIds.map((id, i) => {
-        const gid = `gid://shopify/ProductVariant/${id}`;
-        const label = pairLabels[i] || `Pair ${i + 1}`;
-        return `${gid}:1:${label}`;
-      }).join('|');
-
-      const items = [
-        {
-          id: parseInt(bundleVariantId),
-          quantity: 1,
-          properties: {
-            '_bundleKey': bundleKey,
-            '_isParent': 'true',
-            '_bundle_pairs': bundlePairsValue,
-          }
-        }
-      ];
+      // SECTION 8b — [NEW] build the cart payload using the extracted function.
+      // Previously this block of code lived inline here. It is now in
+      // buildBundleCartPayload() directly above. Same logic, same output.
+      const { items } = buildBundleCartPayload(properties, bundleVariantId);
 
       console.log('Adding bundle:', JSON.stringify(items, null, 2));
 
-      // Remove any hidden form inputs
+      // SECTION 8c — clean up any leftover hidden form inputs (unchanged from v1)
       form.querySelectorAll('input[name^="properties["]').forEach(i => i.remove());
 
+      // SECTION 8d — POST to Shopify cart API (unchanged from v1)
       const response = await fetch('/cart/add.js', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -632,14 +702,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (data.status) throw new Error(data.description || 'Cart error');
 
-      // Open drawer immediately — feels instant
+      // SECTION 8e — open drawer immediately, feels instant (unchanged from v1)
       const cartDrawerEl = document.querySelector('cart-drawer');
       if (cartDrawerEl) {
         cartDrawerEl.classList.remove('is-empty');
         if (typeof cartDrawerEl.open === 'function') cartDrawerEl.open();
       }
 
-      // Refresh drawer content in background — non-blocking
+      // SECTION 8f — refresh drawer content in background, non-blocking (unchanged from v1)
       fetch('/?sections=cart-drawer')
         .then(r => r.json())
         .then(sections => {
@@ -672,4 +742,3 @@ document.addEventListener("DOMContentLoaded", function () {
 }); // end DOMContentLoaded
 </script>
 {% endif %}
-    
