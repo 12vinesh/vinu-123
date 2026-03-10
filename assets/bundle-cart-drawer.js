@@ -172,7 +172,7 @@
       isHydrating = false;
     }
   }
-
+  //CHANGE:
   function initToggle(cartItemEl) {
   const toggleBtn = cartItemEl.querySelector('[data-bundle-toggle]');
   const pairsList = cartItemEl.querySelector('[data-bundle-pairs-list]');
