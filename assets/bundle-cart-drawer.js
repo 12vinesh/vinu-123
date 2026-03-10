@@ -174,27 +174,52 @@
   }
 
   function initToggle(cartItemEl) {
-    const toggleBtn = cartItemEl.querySelector('[data-bundle-toggle]');
-    const pairsList = cartItemEl.querySelector('[data-bundle-pairs-list]');
-    if (!toggleBtn || !pairsList) return;
+  const toggleBtn = cartItemEl.querySelector('[data-bundle-toggle]');
+  const pairsList = cartItemEl.querySelector('[data-bundle-pairs-list]');
 
-    if (toggleBtn.dataset.toggleInitialized === "true") return;
-       toggleBtn.dataset.toggleInitialized = "true";
+  // Stop if required elements are missing
+  if (!toggleBtn || !pairsList) return;
 
-      toggleBtn.addEventListener('click', () => {
-      const isExpanded = newBtn.getAttribute('aria-expanded') === 'true';
-      const pairCount = pairsList.querySelectorAll('.bundle-pair-item').length;
-      if (isExpanded) {
-        pairsList.style.display = 'none';
-        newBtn.textContent = `Show ${pairCount} items ▼`;
-        newBtn.setAttribute('aria-expanded', 'false');
-      } else {
-        pairsList.style.display = '';
-        newBtn.textContent = `Hide ${pairCount} items ▲`;
-        newBtn.setAttribute('aria-expanded', 'true');
-      }
-    });
-  }
+  // Prevent attaching the same event listener multiple times
+  // because hydrateBundleItems() can run repeatedly
+  if (toggleBtn.dataset.toggleInitialized === "true") return;
+
+  // Mark toggle as initialized
+  toggleBtn.dataset.toggleInitialized = "true";
+
+  // Add click listener for show/hide behaviour
+  toggleBtn.addEventListener('click', () => {
+
+    // Check current state of toggle button
+    const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+
+    // Count number of bundle items
+    const pairCount = pairsList.querySelectorAll('.bundle-pair-item').length;
+
+    if (isExpanded) {
+
+      // Hide bundle items
+      pairsList.style.display = 'none';
+
+      // Update button text
+      toggleBtn.textContent = `Show ${pairCount} items ▼`;
+
+      // Update accessibility attribute
+      toggleBtn.setAttribute('aria-expanded', 'false');
+
+    } else {
+
+      // Show bundle items
+      pairsList.style.display = '';
+
+      // Update button text
+      toggleBtn.textContent = `Hide ${pairCount} items ▲`;
+
+      // Update accessibility attribute
+      toggleBtn.setAttribute('aria-expanded', 'true');
+    }
+  });
+}
 
   function handleBundleRemove() {
     document.addEventListener('click', async (e) => {
