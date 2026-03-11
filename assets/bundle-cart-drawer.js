@@ -283,7 +283,7 @@
       }
     }, true);
   }
-
+//Changes
   function debouncedHydrate() {
   clearTimeout(hydrateTimer);
   hydrateTimer = setTimeout(() => {
@@ -291,6 +291,17 @@
     hydrateBundleItems();
   }, 400); // ← slightly longer to ensure drawer HTML is fully painted
 }
+// Listen for Dawn's custom cart update events
+document.addEventListener('cart:updated', () => {
+  isHydrating = false;
+  debouncedHydrate();
+});
+
+// Also hook into drawer open — Dawn dispatches this
+document.addEventListener('drawer:open', () => {
+  isHydrating = false;
+  debouncedHydrate();
+});
 
   document.addEventListener('DOMContentLoaded', () => {
     preloadAllBundleImages();
