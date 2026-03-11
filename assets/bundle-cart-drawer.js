@@ -84,8 +84,11 @@ console.log("Hydrate triggered", Date.now());
 if (isHydrating) return;
 
 const bundleParents = document.querySelectorAll('[data-bundle-key]');
-if (!bundleParents.length) return;
 
+if (!bundleParents.length) {
+  console.log("No bundle parents found yet");
+  return;
+}
 isHydrating = true;
 
 try {
@@ -120,7 +123,7 @@ for (const parentEl of bundleParents) {
   const variants = await Promise.all(
     children.map(child => fetchVariant(child.variantId))
   );
-  if (!document.body.contains(parentEl)) return;
+ 
   children.forEach((child,index)=>{
 
     const variant = variants[index];
