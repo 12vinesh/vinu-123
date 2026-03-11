@@ -1,7 +1,3 @@
-/**
- * Shopify Cart Bundle Hydrator
- * High-performance version: Listens to Dawn's internal render events.
- */
 (function () {
   'use strict';
 
@@ -9,7 +5,6 @@
   let isHydrating = false;
   let hydrateTimer = null;
 
-  // --- 1. DATA FETCHING ---
   async function fetchVariant(variantId) {
     if (variantCache[variantId]) return variantCache[variantId];
     try {
@@ -17,167 +12,316 @@
       const data = await res.json();
       variantCache[variantId] = data;
       return data;
-    } catch (e) { return null; }
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function preloadAllBundleImages() {
+    try {
+      const res = await fetch('/cart.js');
+      const cart = await res.json();
+      cart.items.forEach(item => {
+        if (item.properties?._isParent === 'true' && item.properties?._bundle_pairs) {
+          const pairs = parseBundlePairs(item.properties._bundle_pairs);
+          pairs.forEach(pair => fetchVariant(pair.variantId));
+        }
+      });
+    } catch(e) {}
+  }
+
+  function getPairSortIndex(label) {
+    if (!label) return 999;
+    const lower = label.toLowerCase();
+    if (lower.includes('free')) return 998;
+    const match = lower.match(/(\d+)/);
+    return match ? parseInt(match[1]) : 997;
   }
 
   function parseBundlePairs(raw) {
     if (!raw) return [];
-    return raw.split('|').map(p => p.trim()).filter(Boolean).map(part => {
-      const match = part.match(/^(gid:\/\/shopify\/ProductVariant\/\d+):(\d+):(.+)$/);
-      if (!match) return null;
-      return {
-        variantId: match[1].split('/').pop(),
-        quantity: parseInt(match[2]) || 1,
-        label: match[3]
-      };
-    }).filter(Boolean);
+    return raw
+      .split('|')
+      .map(part => part.trim())
+      .filter(Boolean)
+      .map(part => {
+        const gidMatch = part.match(/^(gid:\/\/shopify\/ProductVariant\/\d+):(\d+):(.+)$/);
+        if (!gidMatch) return null;
+        const fullGid = gidMatch[1];
+        const quantity = parseInt(gidMatch[2]) || 1;
+        const label = gidMatch[3];
+        const numericId = fullGid.split('/').pop();
+        return {
+          variantId: numericId,
+          quantity,
+          label,
+          sortIndex: getPairSortIndex(label)
+        };
+      })
+      .filter(Boolean);
   }
 
-  // --- 2. HYDRATION (THE BUILDER) ---
+  async function getCartBundleChildren() {
+    const res = await fetch('/cart.js');
+    const cart = await res.json();
+    const groups = {};
+
+    cart.items.forEach(item => {
+      const isParent = item.properties?._isParent === 'true';
+      const bundleKey = item.properties?._bundleKey;
+      const rawPairs = item.properties?._bundle_pairs;
+      if (!isParent || !bundleKey || !rawPairs) return;
+
+      const children = parseBundlePairs(rawPairs);
+      children.sort((a, b) => a.sortIndex - b.sortIndex);
+      groups[bundleKey] = { children };
+    });
+
+    return groups;
+  }
+
   async function hydrateBundleItems() {
-    // Only allow one instance of this function to run at a time
     if (isHydrating) return;
-    
+
     const bundleParents = document.querySelectorAll('[data-bundle-key]');
     if (!bundleParents.length) return;
 
     isHydrating = true;
-
-    // Disconnect observer while we work to prevent the "Multiplying Socks" bug
-    if (window.bundleObserver) window.bundleObserver.disconnect();
+    // 1. Temporarily stop observing to prevent infinite loops
+    if (observer) observer.disconnect();
 
     try {
       const res = await fetch('/cart.js');
       const cart = await res.json();
 
+      const groups = await getCartBundleChildren();  
+
       for (const parentEl of bundleParents) {
         const bundleKey = parentEl.dataset.bundleKey;
+        if (!bundleKey) continue;
+      //CHANGE
+      // If bundle items already exist, we still need to ensure the toggle works
+      // because the cart drawer may have been re-rendered via AJAX
+       //if (parentEl.querySelector('.bundle-pair-item')) {
+          //   initToggle(parentEl); // Reattach toggle click event
+        //     continue; // Skip rebuilding bundle items again
+        //}
+
+        const children = groups[bundleKey]?.children || [];
         const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
-        if (!pairsList || !bundleKey) continue;
+        const toggleBtn = parentEl.querySelector('[data-bundle-toggle]');
 
-        const parentItem = cart.items.find(item => 
-          item.properties?._bundleKey === bundleKey && item.properties?._isParent === 'true'
+        if (!pairsList) continue;
+
+         pairsList.innerHTML = '';
+
+        if (toggleBtn) {
+          toggleBtn.textContent = `Hide ${children.length} items ▲`;
+          toggleBtn.setAttribute('aria-expanded', 'true');
+        }
+
+        const variants = await Promise.all(
+          children.map(child => child.variantId ? fetchVariant(child.variantId) : null)
         );
-        if (!parentItem) continue;
-
-        // Immediately clear to prevent duplicates
-        pairsList.innerHTML = '';
-
-        const children = parseBundlePairs(parentItem.properties._bundle_pairs);
-        const parentQty = parentItem.quantity || 1;
-        
-        // Fetch variants in parallel (Fastest)
-        const variants = await Promise.all(children.map(c => fetchVariant(c.variantId)));
+        // Get parent cart quantity
+        const parentCartItem = cart.items.find(
+           item => item.properties?._bundleKey === bundleKey && item.properties?._isParent === 'true'
+           );
+        const parentQty = parentCartItem?.quantity || 1;
 
         children.forEach((child, index) => {
           const variant = variants[index];
           const li = document.createElement('li');
           li.className = 'bundle-pair-item';
-          li.style.listStyle = 'none';
-          li.innerHTML = `
-            <div class="bundle-pair-item__inner" style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-              <div class="bundle-pair-item__img-wrap" style="flex-shrink:0;">
-                ${variant?.featured_image?.src 
-                  ? `<img src="${variant.featured_image.src}" width="40" height="40" style="object-fit:cover; border-radius:4px;">` 
-                  : ''}
-              </div>
-              <div class="bundle-pair-item__info">
-                <div style="font-weight:600; font-size:12px;">${child.quantity * parentQty} × ${variant?.product_title || 'Item'}</div>
-                <div style="font-size:11px; opacity:0.7;">${variant?.title || ''}</div>
-              </div>
-            </div>
-          `;
+
+          const inner = document.createElement('div');
+          inner.className = 'bundle-pair-item__inner';
+
+          const imgWrap = document.createElement('div');
+          imgWrap.className = 'bundle-pair-item__img-wrap';
+
+          if (variant?.featured_image?.src) {
+            const img = document.createElement('img');
+            img.src = variant.featured_image.src;
+            img.alt = variant.title || '';
+            img.width = 40;
+            img.height = 40;
+            img.loading = 'eager';
+            img.className = 'bundle-pair-item__img';
+            imgWrap.appendChild(img);
+          }
+
+          const info = document.createElement('div');
+          info.className = 'bundle-pair-item__info';
+
+        const labelEl = document.createElement('span');
+        labelEl.className = 'bundle-pair-item__label';
+       labelEl.textContent = `${child.quantity * parentQty} × ${variant?.product_title || 'Stepzz Grip Socks'}`;//changed the hardcoded name to dynamic title fetching
+
+          const value = document.createElement('span');
+          value.className = 'bundle-pair-item__value';
+          value.textContent = variant?.title || '';
+
+          info.appendChild(labelEl);
+          info.appendChild(value);
+          inner.appendChild(imgWrap);
+          inner.appendChild(info);
+          li.appendChild(inner);
           pairsList.appendChild(li);
         });
 
         initToggle(parentEl);
       }
-    } catch (e) {
-      console.error("Bundle Display Error:", e);
     } finally {
       isHydrating = false;
-      // Re-enable the observer
-      const drawer = document.querySelector('cart-drawer');
-      if (drawer && window.bundleObserver) {
-        window.bundleObserver.observe(drawer, { childList: true, subtree: true });
-      }
+      if (cartDrawer) {
+      observer.observe(cartDrawer, { childList: true, subtree: true });
+    }
     }
   }
+  //CHANGE:
+  function initToggle(cartItemEl) {
+  const toggleBtn = cartItemEl.querySelector('[data-bundle-toggle]');
+  const pairsList = cartItemEl.querySelector('[data-bundle-pairs-list]');
 
-  // --- 3. TOGGLE & REMOVE ---
-  function initToggle(parentEl) {
-    const btn = parentEl.querySelector('[data-bundle-toggle]');
-    const list = parentEl.querySelector('[data-bundle-pairs-list]');
-    if (!btn || !list || btn.dataset.bound === "true") return;
+  // Stop if required elements are missing
+  if (!toggleBtn || !pairsList) return;
 
-    btn.dataset.bound = "true";
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const isHidden = list.style.display === 'none';
-      list.style.display = isHidden ? '' : 'none';
-      btn.textContent = isHidden ? 'Hide items ▲' : `Show items ▼`;
-    });
-  }
+  // Prevent attaching the same event listener multiple times
+  // because hydrateBundleItems() can run repeatedly
+  if (toggleBtn.dataset.toggleInitialized === "true") return;
+
+  // Mark toggle as initialized
+  toggleBtn.dataset.toggleInitialized = "true";
+
+  // Add click listener for show/hide behaviour
+  toggleBtn.addEventListener('click', () => {
+
+    // Check current state of toggle button
+    const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+
+    // Count number of bundle items
+    const pairCount = pairsList.querySelectorAll('.bundle-pair-item').length;
+
+    if (isExpanded) {
+
+      // Hide bundle items
+      pairsList.style.display = 'none';
+
+      // Update button text
+      toggleBtn.textContent = `Show ${pairCount} items ▼`;
+
+      // Update accessibility attribute
+      toggleBtn.setAttribute('aria-expanded', 'false');
+
+    } else {
+
+      // Show bundle items
+      pairsList.style.display = '';
+
+      // Update button text
+      toggleBtn.textContent = `Hide ${pairCount} items ▲`;
+
+      // Update accessibility attribute
+      toggleBtn.setAttribute('aria-expanded', 'true');
+    }
+  });
+}
 
   function handleBundleRemove() {
     document.addEventListener('click', async (e) => {
-      const btn = e.target.closest('.cart-bundle-remove[data-bundle-key]');
-      if (!btn) return;
+      const removeBtn = e.target.closest('.cart-bundle-remove[data-bundle-key]');
+      if (!removeBtn) return;
+
+      const bundleKey = removeBtn.dataset.bundleKey;
+      if (!bundleKey) return;
 
       e.preventDefault();
-      const bundleKey = btn.dataset.bundleKey;
-      btn.innerHTML = 'Removing...';
+      e.stopImmediatePropagation();
+
+      removeBtn.innerHTML = '<span style="opacity:0.4">⏳</span>';
+      removeBtn.disabled = true;
 
       try {
         const cart = await fetch('/cart.js').then(r => r.json());
-        const item = cart.items.find(i => i.properties?._bundleKey === bundleKey && i.properties?._isParent === 'true');
-        
-        if (item) {
-          await fetch('/cart/change.js', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: item.key, quantity: 0 })
-          });
-          // Reload page on removal to ensure everything is clean
-          window.location.reload();
+
+        const parentItem = cart.items.find(
+          item => item.properties?._bundleKey === bundleKey
+            && item.properties?._isParent === 'true'
+        );
+
+        if (!parentItem) return;
+
+        // Remove item and fetch new section in parallel — faster!
+        await fetch('/cart/change.js', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: parentItem.key, quantity: 0 }),
+        });
+
+        // Single section fetch after removal
+        const html = await fetch('/?section_id=cart-drawer').then(r => r.text());
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        const newInner = doc.querySelector('.drawer__inner');
+        const oldInner = document.querySelector('.drawer__inner');
+        if (newInner && oldInner) oldInner.innerHTML = newInner.innerHTML;
+
+        const newCount = doc.querySelector('.cart-count-bubble');
+        const oldCount = document.querySelector('.cart-count-bubble');
+        if (newCount && oldCount) oldCount.innerHTML = newCount.innerHTML;
+        else if (oldCount) oldCount.innerHTML = '';
+
+        // Check empty state from section HTML (no extra fetch needed)
+        const cartDrawerEl = document.querySelector('cart-drawer');
+        const isEmpty = !doc.querySelector('.cart-item');
+
+        if (isEmpty && cartDrawerEl) {
+          cartDrawerEl.classList.add('is-empty');
+        } else {
+          cartDrawerEl?.classList.remove('is-empty');
+          hydrateBundleItems();
         }
-      } catch (err) { window.location.reload(); }
-    });
+
+      } catch (err) {
+        console.error('Bundle remove error:', err);
+        window.location.reload();
+      }
+    }, true);
   }
+//Changes
+  function debouncedHydrate() {
+  clearTimeout(hydrateTimer);
+  hydrateTimer = setTimeout(() => {
+    isHydrating = false; // ← ADD THIS: reset guard before each debounced call
+    hydrateBundleItems();
+  }, 400); // ← slightly longer to ensure drawer HTML is fully painted
+}
+//change:
+// Listen for Dawn's custom cart update events
+document.addEventListener('cart:updated', () => {
+  isHydrating = false;
+  debouncedHydrate();
+});
 
-  // --- 4. INITIALIZATION & RE-RENDER HOOKS ---
-  const debouncedHydrate = () => {
-    clearTimeout(hydrateTimer);
-    hydrateTimer = setTimeout(hydrateBundleItems, 100); // Shorter delay for snappier feel
-  };
-
-  window.bundleObserver = new MutationObserver((mutations) => {
-    if (mutations.some(m => m.addedNodes.length > 0)) {
-      debouncedHydrate();
-    }
-  });
+// Also hook into drawer open — Dawn dispatches this
+document.addEventListener('drawer:open', () => {
+  isHydrating = false;
+  debouncedHydrate();
+});
 
   document.addEventListener('DOMContentLoaded', () => {
-    handleBundleRemove();
+    preloadAllBundleImages();
     hydrateBundleItems();
-
-    const drawer = document.querySelector('cart-drawer');
-    if (drawer) {
-      window.bundleObserver.observe(drawer, { childList: true, subtree: true });
-      
-      /**
-       * CRITICAL FIX: Dawn Theme Hook
-       * This triggers when the cart drawer re-renders after an "Add to Cart" click
-       */
-      drawer.addEventListener('render-contents', () => {
-        isHydrating = false; // Reset guard
-        debouncedHydrate();
-      });
-    }
+    handleBundleRemove();
   });
 
-  // Event listeners for theme-specific updates
-  document.addEventListener('cart:updated', debouncedHydrate);
-  document.addEventListener('drawer:open', debouncedHydrate);
+  const observer = new MutationObserver(debouncedHydrate);
+  //change:limited observer to cart drawer only
+  const cartDrawer = document.querySelector('cart-drawer');
+  if (cartDrawer) {
+  observer.observe(cartDrawer, { childList: true, subtree: true });
+   }
 
 })();
