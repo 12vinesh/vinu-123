@@ -122,8 +122,7 @@
           children.map(child => child.variantId ? fetchVariant(child.variantId) : null)
         );
         // Get parent cart quantity
-        const res = await fetch('/cart.js').then(r => r.json());
-        const parentCartItem = res.items.find(
+        const parentCartItem = cart.items.find(
            item => item.properties?._bundleKey === bundleKey && item.properties?._isParent === 'true'
            );
         const parentQty = parentCartItem?.quantity || 1;
