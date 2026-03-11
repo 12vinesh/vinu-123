@@ -30,8 +30,7 @@
 
   async function preloadAllBundleImages() {
     try {
-      const res = await fetch('/cart.js');
-      const cart = await res.json();
+     
       cart.items.forEach(item => {
         if (item.properties?._isParent === 'true' && item.properties?._bundle_pairs) {
           const pairs = parseBundlePairs(item.properties._bundle_pairs);
@@ -73,100 +72,88 @@
   }
 
   async function hydrateBundleItems() {
-    if (isHydrating) return;
+  if (isHydrating) return;
 
-    const bundleParents = document.querySelectorAll('[data-bundle-key]');
-    if (!bundleParents.length) return;
+  const bundleParents = document.querySelectorAll('[data-bundle-key]');
+  if (!bundleParents.length) return;
 
-    isHydrating = true;
+  isHydrating = true;
+  safeObserverDisconnect();
 
-    // FIX 2: Use safe disconnect helper
-    safeObserverDisconnect();
+  try {
+    for (const parentEl of bundleParents) {
+      const bundleKey = parentEl.dataset.bundleKey;
+      if (!bundleKey) continue;
 
-    try {
-      const res = await fetch('/cart.js');
-      const cart = await res.json();
-       
-     
+      // ✅ Read everything from DOM — zero fetches
+      const rawPairs = parentEl.dataset.bundlePairs;
+      const parentQty = parseInt(parentEl.dataset.bundleQty) || 1;
+      const children = parseBundlePairs(rawPairs || '');
 
-      for (const parentEl of bundleParents) {
-        const bundleKey = parentEl.dataset.bundleKey;
-        if (!bundleKey) continue;
-         //CHANGE:
-        // Just read it directly from the HTML — no fetching!
-        const rawPairs = parentEl.dataset.bundlePairs;
-        const children = parseBundlePairs(rawPairs || '');
-        const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
-        const toggleBtn = parentEl.querySelector('[data-bundle-toggle]');
+      const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
+      const toggleBtn = parentEl.querySelector('[data-bundle-toggle]');
+      if (!pairsList) continue;
 
-        if (!pairsList) continue;
+      pairsList.innerHTML = '';
 
-        pairsList.innerHTML = '';
+      if (toggleBtn) {
+        toggleBtn.textContent = `Hide ${children.length} items ▲`;
+        toggleBtn.setAttribute('aria-expanded', 'true');
+      }
 
-        if (toggleBtn) {
-          toggleBtn.textContent = `Hide ${children.length} items ▲`;
-          toggleBtn.setAttribute('aria-expanded', 'true');
+      // ✅ Only fetch variant images — these are cached after first load
+      const variants = await Promise.all(
+        children.map(child => child.variantId ? fetchVariant(child.variantId) : null)
+      );
+
+      children.forEach((child, index) => {
+        const variant = variants[index];
+        const li = document.createElement('li');
+        li.className = 'bundle-pair-item';
+
+        const inner = document.createElement('div');
+        inner.className = 'bundle-pair-item__inner';
+
+        const imgWrap = document.createElement('div');
+        imgWrap.className = 'bundle-pair-item__img-wrap';
+
+        if (variant?.featured_image?.src) {
+          const img = document.createElement('img');
+          img.src = variant.featured_image.src;
+          img.alt = variant.title || '';
+          img.width = 40;
+          img.height = 40;
+          img.loading = 'eager';
+          img.className = 'bundle-pair-item__img';
+          imgWrap.appendChild(img);
         }
 
-        const variants = await Promise.all(
-          children.map(child => child.variantId ? fetchVariant(child.variantId) : null)
-        );
+        const info = document.createElement('div');
+        info.className = 'bundle-pair-item__info';
 
-        const parentCartItem = cart.items.find(
-          item => item.properties?._bundleKey === bundleKey && item.properties?._isParent === 'true'
-        );
-        const parentQty = parentCartItem?.quantity || 1;
+        const labelEl = document.createElement('span');
+        labelEl.className = 'bundle-pair-item__label';
+        labelEl.textContent = `${child.quantity * parentQty} × ${variant?.product_title || 'Stepzz Grip Socks'}`;
 
-        children.forEach((child, index) => {
-          const variant = variants[index];
-          const li = document.createElement('li');
-          li.className = 'bundle-pair-item';
+        const value = document.createElement('span');
+        value.className = 'bundle-pair-item__value';
+        value.textContent = variant?.title || '';
 
-          const inner = document.createElement('div');
-          inner.className = 'bundle-pair-item__inner';
+        info.appendChild(labelEl);
+        info.appendChild(value);
+        inner.appendChild(imgWrap);
+        inner.appendChild(info);
+        li.appendChild(inner);
+        pairsList.appendChild(li);
+      });
 
-          const imgWrap = document.createElement('div');
-          imgWrap.className = 'bundle-pair-item__img-wrap';
-
-          if (variant?.featured_image?.src) {
-            const img = document.createElement('img');
-            img.src = variant.featured_image.src;
-            img.alt = variant.title || '';
-            img.width = 40;
-            img.height = 40;
-            img.loading = 'eager';
-            img.className = 'bundle-pair-item__img';
-            imgWrap.appendChild(img);
-          }
-
-          const info = document.createElement('div');
-          info.className = 'bundle-pair-item__info';
-
-          const labelEl = document.createElement('span');
-          labelEl.className = 'bundle-pair-item__label';
-          labelEl.textContent = `${child.quantity * parentQty} × ${variant?.product_title || 'Stepzz Grip Socks'}`;
-
-          const value = document.createElement('span');
-          value.className = 'bundle-pair-item__value';
-          value.textContent = variant?.title || '';
-
-          info.appendChild(labelEl);
-          info.appendChild(value);
-          inner.appendChild(imgWrap);
-          inner.appendChild(info);
-          li.appendChild(inner);
-          pairsList.appendChild(li);
-        });
-
-        initToggle(parentEl);
-      }
-    } finally {
-      isHydrating = false;
-      // FIX 2: Use safe reconnect helper
-      safeObserverReconnect();
+      initToggle(parentEl);
     }
+  } finally {
+    isHydrating = false;
+    safeObserverReconnect();
   }
-
+}
   // FIX 5: Extract listener logic into standalone helper
   function attachToggleListener(btn, pairsList) {
     btn.addEventListener('click', () => {
