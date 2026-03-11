@@ -108,6 +108,7 @@ for (const parentEl of bundleParents) {
   const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
   const toggleBtn = parentEl.querySelector('[data-bundle-toggle]');
   if (!pairsList) continue;
+  console.log("Pairs list:", pairsList);
 
   pairsList.innerHTML = '';
 
