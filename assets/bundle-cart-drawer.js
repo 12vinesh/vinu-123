@@ -146,43 +146,9 @@
 
   }
 }
-  // FIX 5: Extract listener logic into standalone helper
-  function attachToggleListener(btn, pairsList) {
-    btn.addEventListener('click', () => {
-      const isExpanded = btn.getAttribute('aria-expanded') === 'true';
-      const pairCount = pairsList.querySelectorAll('.bundle-pair-item').length;
-      if (isExpanded) {
-        pairsList.style.display = 'none';
-        btn.textContent = `Show ${pairCount} items ▼`;
-        btn.setAttribute('aria-expanded', 'false');
-      } else {
-        pairsList.style.display = '';
-        btn.textContent = `Hide ${pairCount} items ▲`;
-        btn.setAttribute('aria-expanded', 'true');
-      }
-    });
-  }
+ 
 
-  // FIX 5: Clone button to strip stale listeners after DOM re-renders
-  function initToggle(cartItemEl) {
-    let toggleBtn = cartItemEl.querySelector('[data-bundle-toggle]');
-    const pairsList = cartItemEl.querySelector('[data-bundle-pairs-list]');
-
-    if (!toggleBtn || !pairsList) return;
-
-    if (toggleBtn.dataset.toggleInitialized === 'true') {
-      // Replace with a fresh clone to strip any stale event listeners
-      const fresh = toggleBtn.cloneNode(true);
-      fresh.removeAttribute('data-toggle-initialized');
-      toggleBtn.replaceWith(fresh);
-      toggleBtn = cartItemEl.querySelector('[data-bundle-toggle]');
-      if (!toggleBtn) return;
-    }
-
-    toggleBtn.dataset.toggleInitialized = 'true';
-    attachToggleListener(toggleBtn, pairsList);
-  }
-
+  
   function handleBundleRemove() {
     document.addEventListener('click', async (e) => {
       const removeBtn = e.target.closest('.cart-bundle-remove[data-bundle-key]');
