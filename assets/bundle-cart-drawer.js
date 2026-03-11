@@ -4,7 +4,7 @@
   const variantCache = {};
   let isHydrating = false;
   let hydrateTimer = null;
-  let cartDrawer = null; // will hold #CartDrawer-CartItems
+  let cartDrawer = null; // will hold .drawer__inner
 
  
 
@@ -136,7 +136,7 @@
         pairsList.appendChild(li);
       });
 
-      // IMPORTANT: no initToggle(parentEl) here
+     
     }
   } finally {
     isHydrating = false;
@@ -261,7 +261,7 @@ function setupBundleToggleDelegation() {
   handleBundleRemove();
   setupBundleToggleDelegation();
 
-  cartDrawer = document.querySelector('#CartDrawer-CartItems');
+  cartDrawer = document.querySelector('.drawer__inner');
   if (cartDrawer) {
     observer.observe(cartDrawer, { childList: true, subtree: true });
   } else {
@@ -269,7 +269,7 @@ function setupBundleToggleDelegation() {
     const bodyObserver = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
-          if (node.nodeType === 1 && node.matches?.('#CartDrawer-CartItems')) {
+          if (node.nodeType === 1 && node.matches?.('.drawer__inner')) {
             cartDrawer = node;
             observer.observe(cartDrawer, { childList: true, subtree: true });
             bodyObserver.disconnect();
