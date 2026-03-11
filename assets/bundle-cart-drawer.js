@@ -99,6 +99,8 @@ for (const parentEl of bundleParents) {
 
   const rawPairs = parentEl.dataset.bundlePairs;
   if (!rawPairs) continue;
+  console.log("Bundle parent:", parentEl);
+  console.log("Pairs data:", rawPairs);
 
   const parentQty = parseInt(parentEl.dataset.bundleQty) || 1;
   const children = parseBundlePairs(rawPairs);
