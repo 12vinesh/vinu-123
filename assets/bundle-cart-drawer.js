@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-
+  console.log("Bundle script loaded");
   const variantCache = {};
   let isHydrating = false;
   let hydrateTimer = null;
