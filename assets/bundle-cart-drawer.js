@@ -4,7 +4,7 @@
   const variantCache = {};
   let isHydrating = false;
   let hydrateTimer = null;
-  let cartDrawer = null; // FIX 1: declare here, assign in DOMContentLoaded
+  let cartDrawer = null; // will hold #CartDrawer-CartItems
 
  
 
@@ -244,10 +244,7 @@ function setupBundleToggleDelegation() {
     }, 150);
   }
 
-  // FIX 3: Removed `isHydrating = false` resets from event listeners
-  document.addEventListener('cart:updated', () => {
-    debouncedHydrate();
-  });
+ 
   //Change:
   document.addEventListener('drawer:open', () => {
     debouncedHydrate();
