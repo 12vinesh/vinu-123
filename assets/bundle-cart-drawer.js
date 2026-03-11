@@ -283,7 +283,7 @@
   hydrateBundleItems();
   handleBundleRemove();
 
-  cartDrawer = document.querySelector('cart-drawer');
+  cartDrawer = document.querySelector('#CartDrawer');
   if (cartDrawer) {
     observer.observe(cartDrawer, { childList: true, subtree: true });
   } else {
