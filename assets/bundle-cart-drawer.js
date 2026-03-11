@@ -120,7 +120,7 @@ for (const parentEl of bundleParents) {
   const variants = await Promise.all(
     children.map(child => fetchVariant(child.variantId))
   );
-
+  if (!document.body.contains(parentEl)) return;
   children.forEach((child,index)=>{
 
     const variant = variants[index];
