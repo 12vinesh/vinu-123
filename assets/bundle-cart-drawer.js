@@ -261,7 +261,7 @@
     clearTimeout(hydrateTimer);
     hydrateTimer = setTimeout(() => {
       hydrateBundleItems();
-    }, 50);
+    }, 150);
   }
 
   // FIX 3: Removed `isHydrating = false` resets from event listeners
