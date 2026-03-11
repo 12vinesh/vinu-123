@@ -112,6 +112,11 @@ for (const parentEl of bundleParents) {
   const toggleBtn = parentEl.querySelector('[data-bundle-toggle]');
   if (!pairsList) continue;
   console.log("Pairs list:", pairsList);
+  //Change:
+  if (!document.body.contains(parentEl)) {
+  console.log("Parent replaced during hydration");
+  continue;
+}
 
   pairsList.innerHTML = '';
 
