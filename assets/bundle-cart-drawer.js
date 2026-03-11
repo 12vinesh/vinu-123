@@ -73,27 +73,36 @@
 
   try {
     for (const parentEl of bundleParents) {
+      // Skip if already hydrated
+      if (parentEl.dataset.bundleHydrated === 'true') continue;
+
       const bundleKey = parentEl.dataset.bundleKey;
       if (!bundleKey) continue;
 
+      // Read data attributes
       const rawPairs = parentEl.dataset.bundlePairs;
-      if(!rawPairs) continue;
+
+      // If there's no bundle pairs data yet, skip this parent for now
+      if (!rawPairs) continue;
+
       const parentQty = parseInt(parentEl.dataset.bundleQty) || 1;
-      const children = parseBundlePairs(rawPairs || '');
+      const children = parseBundlePairs(rawPairs);
 
       const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
       const toggleBtn = parentEl.querySelector('[data-bundle-toggle]');
       if (!pairsList) continue;
 
+      // Reset list
       pairsList.innerHTML = '';
 
+      // Only override the button text if we actually have children
       if (toggleBtn && children.length > 0) {
         toggleBtn.textContent = `Hide ${children.length} items ▲`;
         toggleBtn.setAttribute('aria-expanded', 'true');
       }
 
       const variants = await Promise.all(
-        children.map(child => child.variantId ? fetchVariant(child.variantId) : null)
+        children.map((child) => (child.variantId ? fetchVariant(child.variantId) : null))
       );
 
       children.forEach((child, index) => {
@@ -123,7 +132,9 @@
 
         const labelEl = document.createElement('span');
         labelEl.className = 'bundle-pair-item__label';
-        labelEl.textContent = `${child.quantity * parentQty} × ${variant?.product_title || 'Stepzz Grip Socks'}`;
+        labelEl.textContent = `${child.quantity * parentQty} × ${
+          variant?.product_title || 'Stepzz Grip Socks'
+        }`;
 
         const value = document.createElement('span');
         value.className = 'bundle-pair-item__value';
@@ -137,7 +148,8 @@
         pairsList.appendChild(li);
       });
 
-     
+      // Mark this parent as hydrated so we don't do it again unless DOM is replaced
+      parentEl.dataset.bundleHydrated = 'true';
     }
   } finally {
     isHydrating = false;
