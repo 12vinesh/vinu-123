@@ -78,7 +78,7 @@
   if (!bundleParents.length) return;
 
   isHydrating = true;
-  safeObserverDisconnect();
+ 
 
   try {
     for (const parentEl of bundleParents) {
@@ -151,7 +151,7 @@
     }
   } finally {
     isHydrating = false;
-    safeObserverReconnect();
+
   }
 }
   // FIX 5: Extract listener logic into standalone helper
@@ -276,18 +276,35 @@
   document.addEventListener('cart:rendered', () => {
   debouncedHydrate();
    });
+   //CHANGE:
   // FIX 1: All DOM-dependent setup moved inside DOMContentLoaded
   document.addEventListener('DOMContentLoaded', () => {
-    preloadAllBundleImages();
-    hydrateBundleItems();
-    handleBundleRemove();
+  preloadAllBundleImages();
+  hydrateBundleItems();
+  handleBundleRemove();
 
-    // FIX 1: cartDrawer query and observer.observe() now run after DOM is ready
-    cartDrawer = document.querySelector('cart-drawer');
-    if (cartDrawer) {
-      observer.observe(cartDrawer, { childList: true, subtree: true });
-    }
-  });
+  cartDrawer = document.querySelector('cart-drawer');
+  if (cartDrawer) {
+    observer.observe(cartDrawer, { childList: true, subtree: true });
+  } else {
+    // Fallback: watch for cart-drawer being added later
+    const bodyObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
+          if (node.nodeType === 1 && node.matches?.('cart-drawer')) {
+            cartDrawer = node;
+            observer.observe(cartDrawer, { childList: true, subtree: true });
+            bodyObserver.disconnect();
+            debouncedHydrate();
+            return;
+          }
+        }
+      }
+    });
+
+    bodyObserver.observe(document.body, { childList: true, subtree: true });
+  }
+});
 
   // Declare observer at module level (used by safe helpers above), but attach in DOMContentLoaded
   const observer = new MutationObserver((mutations) => {
