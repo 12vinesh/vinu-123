@@ -109,7 +109,7 @@ for (let parentEl of bundleParents) {
   const parentQty = parseInt(parentEl.dataset.bundleQty) || 1;
   const children = parseBundlePairs(rawPairs);
 
-  const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
+  let pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
   const toggleBtn = parentEl.querySelector('[data-bundle-toggle]');
   if (!pairsList) continue;
   console.log("Pairs list:", pairsList);
