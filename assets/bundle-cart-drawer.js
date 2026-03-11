@@ -309,24 +309,7 @@ function setupBundleToggleDelegation() {
   cartDrawer = document.querySelector('.drawer__inner');
   if (cartDrawer) {
     observer.observe(cartDrawer, { childList: true, subtree: true });
-  } else {
-    // Fallback: watch for cart-drawer being added later
-    const bodyObserver = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        for (const node of mutation.addedNodes) {
-          if (node.nodeType === 1 && node.matches?.('.drawer__inner')) {
-            cartDrawer = node;
-            observer.observe(cartDrawer, { childList: true, subtree: true });
-            bodyObserver.disconnect();
-            debouncedHydrate();
-            return;
-          }
-        }
-      }
-    });
-
-    bodyObserver.observe(document.body, { childList: true, subtree: true });
-  }
+  } 
 });
 
   // Declare observer at module level (used by safe helpers above), but attach in DOMContentLoaded
