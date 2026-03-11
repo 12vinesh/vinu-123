@@ -285,9 +285,12 @@
   }
 
   function debouncedHydrate() {
-    clearTimeout(hydrateTimer);
-    hydrateTimer = setTimeout(() => hydrateBundleItems(), 300);
-  }
+  clearTimeout(hydrateTimer);
+  hydrateTimer = setTimeout(() => {
+    isHydrating = false; // ← ADD THIS: reset guard before each debounced call
+    hydrateBundleItems();
+  }, 400); // ← slightly longer to ensure drawer HTML is fully painted
+}
 
   document.addEventListener('DOMContentLoaded', () => {
     preloadAllBundleImages();
