@@ -146,6 +146,31 @@
 
   }
 }
+function setupBundleToggleDelegation() {
+  document.addEventListener('click', (event) => {
+    const btn = event.target.closest('[data-bundle-toggle]');
+    if (!btn) return;
+
+    const cartItemEl = btn.closest('[data-bundle-key]');
+    if (!cartItemEl) return;
+
+    const pairsList = cartItemEl.querySelector('[data-bundle-pairs-list]');
+    if (!pairsList) return;
+
+    const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+    const pairCount = pairsList.querySelectorAll('.bundle-pair-item').length;
+
+    if (isExpanded) {
+      pairsList.style.display = 'none';
+      btn.textContent = `Show ${pairCount} items ▼`;
+      btn.setAttribute('aria-expanded', 'false');
+    } else {
+      pairsList.style.display = '';
+      btn.textContent = `Hide ${pairCount} items ▲`;
+      btn.setAttribute('aria-expanded', 'true');
+    }
+  });
+}
  
 
   
