@@ -172,6 +172,7 @@ for (const parentEl of bundleParents) {
     li.appendChild(inner);
 
     pairsList.appendChild(li);
+    console.log("Rendering bundle items:", children.length);
 
   });
 
