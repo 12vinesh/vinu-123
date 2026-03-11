@@ -22,7 +22,7 @@
 
   async function preloadAllBundleImages() {
     try {
-     
+      const cart = await fetch('/cart.js').then(r => r.json());
       cart.items.forEach(item => {
         if (item.properties?._isParent === 'true' && item.properties?._bundle_pairs) {
           const pairs = parseBundlePairs(item.properties._bundle_pairs);
