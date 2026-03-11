@@ -327,14 +327,14 @@ function setupBundleToggleDelegation() {
 });
 
   // Declare observer at module level (used by safe helpers above), but attach in DOMContentLoaded
-  const observer = new MutationObserver((mutations) => {
-  console.log("Drawer DOM mutated");
-  console.log("Searching for drawer", document.querySelector('.drawer__inner'));
-  if(isHydrating) return;
+  cconst observer = new MutationObserver((mutations) => {
+  if (isHydrating) return;
+
   for (const mutation of mutations) {
-    if (mutation.addedNodes.length) {
+    if (mutation.addedNodes.length > 0) {
+      console.log("Cart drawer updated → hydrate");
       debouncedHydrate();
-      break;
+      return;
     }
   }
 });
