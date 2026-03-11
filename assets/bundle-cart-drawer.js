@@ -153,6 +153,7 @@
 
       // Mark this parent as hydrated so we don't do it again unless DOM is replaced
       parentEl.dataset.bundleHydrated = 'true';
+      console.log("Hydration running", document.querySelectorAll('[data-bundle-key]'));
     }
   } finally {
     isHydrating = false;
