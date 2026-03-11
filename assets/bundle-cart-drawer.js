@@ -1,3 +1,7 @@
+/**
+ * Shopify Cart Bundle Hydrator
+ * High-performance version: Listens to Dawn's internal render events.
+ */
 (function () {
   'use strict';
 
@@ -5,7 +9,7 @@
   let isHydrating = false;
   let hydrateTimer = null;
 
-  // --- 1. HELPERS ---
+  // --- 1. DATA FETCHING ---
   async function fetchVariant(variantId) {
     if (variantCache[variantId]) return variantCache[variantId];
     try {
@@ -29,17 +33,17 @@
     }).filter(Boolean);
   }
 
-  // --- 2. HYDRATION (The Core Fix) ---
+  // --- 2. HYDRATION (THE BUILDER) ---
   async function hydrateBundleItems() {
-    // Stop if already running
+    // Only allow one instance of this function to run at a time
     if (isHydrating) return;
     
     const bundleParents = document.querySelectorAll('[data-bundle-key]');
     if (!bundleParents.length) return;
 
     isHydrating = true;
-    
-    // Stop the observer so we don't trigger ourselves
+
+    // Disconnect observer while we work to prevent the "Multiplying Socks" bug
     if (window.bundleObserver) window.bundleObserver.disconnect();
 
     try {
@@ -51,33 +55,34 @@
         const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
         if (!pairsList || !bundleKey) continue;
 
-        // Find the parent data
         const parentItem = cart.items.find(item => 
           item.properties?._bundleKey === bundleKey && item.properties?._isParent === 'true'
         );
         if (!parentItem) continue;
 
-        // FIX: Wipe the list immediately before fetching variants
-        pairsList.innerHTML = '<li class="loading-bundles" style="list-style:none; font-size:12px; opacity:0.6;">Updating items...</li>';
+        // Immediately clear to prevent duplicates
+        pairsList.innerHTML = '';
 
         const children = parseBundlePairs(parentItem.properties._bundle_pairs);
         const parentQty = parentItem.quantity || 1;
+        
+        // Fetch variants in parallel (Fastest)
         const variants = await Promise.all(children.map(c => fetchVariant(c.variantId)));
-
-        // Clear the "Updating..." message
-        pairsList.innerHTML = '';
 
         children.forEach((child, index) => {
           const variant = variants[index];
           const li = document.createElement('li');
           li.className = 'bundle-pair-item';
+          li.style.listStyle = 'none';
           li.innerHTML = `
             <div class="bundle-pair-item__inner" style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-              <div class="bundle-pair-item__img-wrap">
-                ${variant?.featured_image?.src ? `<img src="${variant.featured_image.src}" width="40" height="40" style="object-fit:cover;">` : ''}
+              <div class="bundle-pair-item__img-wrap" style="flex-shrink:0;">
+                ${variant?.featured_image?.src 
+                  ? `<img src="${variant.featured_image.src}" width="40" height="40" style="object-fit:cover; border-radius:4px;">` 
+                  : ''}
               </div>
               <div class="bundle-pair-item__info">
-                <div style="font-weight:bold; font-size:13px;">${child.quantity * parentQty} × ${variant?.product_title || 'Item'}</div>
+                <div style="font-weight:600; font-size:12px;">${child.quantity * parentQty} × ${variant?.product_title || 'Item'}</div>
                 <div style="font-size:11px; opacity:0.7;">${variant?.title || ''}</div>
               </div>
             </div>
@@ -91,10 +96,10 @@
       console.error("Bundle Display Error:", e);
     } finally {
       isHydrating = false;
-      // Restart the observer
-      const cartDrawer = document.querySelector('cart-drawer');
-      if (cartDrawer && window.bundleObserver) {
-        window.bundleObserver.observe(cartDrawer, { childList: true, subtree: true });
+      // Re-enable the observer
+      const drawer = document.querySelector('cart-drawer');
+      if (drawer && window.bundleObserver) {
+        window.bundleObserver.observe(drawer, { childList: true, subtree: true });
       }
     }
   }
@@ -122,7 +127,6 @@
       e.preventDefault();
       const bundleKey = btn.dataset.bundleKey;
       btn.innerHTML = 'Removing...';
-      btn.style.pointerEvents = 'none';
 
       try {
         const cart = await fetch('/cart.js').then(r => r.json());
@@ -134,32 +138,46 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: item.key, quantity: 0 })
           });
-          
-          // Force Dawn to update the drawer
-          if (document.querySelector('cart-drawer')) {
-             // This tells the Dawn theme to refresh itself
-             document.querySelector('cart-drawer').classList.add('is-loading');
-             window.location.reload(); // Simplest way to ensure clean state on remove
-          }
+          // Reload page on removal to ensure everything is clean
+          window.location.reload();
         }
       } catch (err) { window.location.reload(); }
     });
   }
 
-  // --- 4. INIT ---
+  // --- 4. INITIALIZATION & RE-RENDER HOOKS ---
   const debouncedHydrate = () => {
     clearTimeout(hydrateTimer);
-    hydrateTimer = setTimeout(hydrateBundleItems, 400);
+    hydrateTimer = setTimeout(hydrateBundleItems, 100); // Shorter delay for snappier feel
   };
 
-  window.bundleObserver = new MutationObserver(debouncedHydrate);
+  window.bundleObserver = new MutationObserver((mutations) => {
+    if (mutations.some(m => m.addedNodes.length > 0)) {
+      debouncedHydrate();
+    }
+  });
 
   document.addEventListener('DOMContentLoaded', () => {
     handleBundleRemove();
     hydrateBundleItems();
+
     const drawer = document.querySelector('cart-drawer');
-    if (drawer) window.bundleObserver.observe(drawer, { childList: true, subtree: true });
+    if (drawer) {
+      window.bundleObserver.observe(drawer, { childList: true, subtree: true });
+      
+      /**
+       * CRITICAL FIX: Dawn Theme Hook
+       * This triggers when the cart drawer re-renders after an "Add to Cart" click
+       */
+      drawer.addEventListener('render-contents', () => {
+        isHydrating = false; // Reset guard
+        debouncedHydrate();
+      });
+    }
   });
 
+  // Event listeners for theme-specific updates
   document.addEventListener('cart:updated', debouncedHydrate);
+  document.addEventListener('drawer:open', debouncedHydrate);
+
 })();
