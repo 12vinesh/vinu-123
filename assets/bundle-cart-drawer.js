@@ -262,8 +262,16 @@
   });
 
   document.addEventListener('drawer:open', () => {
-    debouncedHydrate();
-  });
+  // Make sure we grab cart-drawer even if it was injected after DOMContentLoaded
+  if (!cartDrawer || !document.body.contains(cartDrawer)) {
+    cartDrawer = document.querySelector('cart-drawer');
+    if (cartDrawer) {
+      observer.observe(cartDrawer, { childList: true, subtree: true });
+    }
+  }
+
+  debouncedHydrate();
+});
    
   document.addEventListener('cart:rendered', () => {
   debouncedHydrate();
