@@ -64,6 +64,7 @@
   }
 
  async function hydrateBundleItems() {
+  console.log("Hydrate triggered", Date.now());
   if (isHydrating) return;
 
   const bundleParents = document.querySelectorAll('[data-bundle-key]');
@@ -329,6 +330,7 @@ function setupBundleToggleDelegation() {
 
   // Declare observer at module level (used by safe helpers above), but attach in DOMContentLoaded
   const observer = new MutationObserver((mutations) => {
+  console.log("Drawer DOM mutated");
   if(isHydrating) return;
   for (const mutation of mutations) {
     if (mutation.addedNodes.length) {
