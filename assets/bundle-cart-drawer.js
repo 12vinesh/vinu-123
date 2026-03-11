@@ -174,6 +174,9 @@
       }
     } finally {
       isHydrating = false;
+      if (cartDrawer) {
+      observer.observe(cartDrawer, { childList: true, subtree: true });
+    }
     }
   }
   //CHANGE:
