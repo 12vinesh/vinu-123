@@ -272,7 +272,7 @@
   document.addEventListener('drawer:open', () => {
     debouncedHydrate();
   });
-
+   
   // FIX 1: All DOM-dependent setup moved inside DOMContentLoaded
   document.addEventListener('DOMContentLoaded', () => {
     preloadAllBundleImages();
@@ -287,6 +287,12 @@
   });
 
   // Declare observer at module level (used by safe helpers above), but attach in DOMContentLoaded
-  const observer = new MutationObserver(debouncedHydrate);
-
+  const observer = new MutationObserver((mutations) => {
+  for (const mutation of mutations) {
+    if (mutation.addedNodes.length) {
+      debouncedHydrate();
+      break;
+    }
+  }
+});
 })();
