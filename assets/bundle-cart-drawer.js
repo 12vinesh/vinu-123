@@ -283,7 +283,7 @@ function setupBundleToggleDelegation() {
  
   //Change:
   document.addEventListener('drawer:open', () => {
-    debouncedHydrate();
+    ensureFirstHydrationAfterOpen();
 });
    
   document.addEventListener('cart:rendered', () => {
