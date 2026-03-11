@@ -98,7 +98,7 @@
       // If bundle items already exist, we still need to ensure the toggle works
       // because the cart drawer may have been re-rendered via AJAX
        if (parentEl.querySelector('.bundle-pair-item')) {
-             //initToggle(parentEl); // Reattach toggle click event
+             initToggle(parentEl); // Reattach toggle click event
              continue; // Skip rebuilding bundle items again
         }
 
