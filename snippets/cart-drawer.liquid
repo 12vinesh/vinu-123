@@ -172,7 +172,7 @@
 
         {%- comment -%} BUNDLE PAIRS LIST — only for bundle parent {%- endcomment -%}
         {%- if is_bundle_parent -%}
-          <div class="bundle-pairs" data-bundle-key="{{ item.properties._bundleKey }}"  data-bundle-pairs="{{ item.properties._bundle_pairs | escape }}">{%- comment -%} CHANGE: added bundle-pair {%- endcomment -%}
+          <div class="bundle-pairs" data-bundle-key="{{ item.properties._bundleKey }}"  data-bundle-pairs="{{ item.properties._bundle_pairs | escape }}" data-bundle-qty="{{ item.quantity }}">{%- comment -%} CHANGE: added bundle-pair {%- endcomment -%}
             <button
               type="button"
               class="bundle-pairs__toggle"
