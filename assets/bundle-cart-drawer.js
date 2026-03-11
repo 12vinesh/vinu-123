@@ -5,8 +5,7 @@
   let isHydrating = false;
   let hydrateTimer = null;
 
-  // --- 1. DATA HELPERS ---
-
+  // --- 1. HELPERS ---
   async function fetchVariant(variantId) {
     if (variantCache[variantId]) return variantCache[variantId];
     try {
@@ -14,57 +13,34 @@
       const data = await res.json();
       variantCache[variantId] = data;
       return data;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function getPairSortIndex(label) {
-    if (!label) return 999;
-    const lower = label.toLowerCase();
-    if (lower.includes('free')) return 998;
-    const match = lower.match(/(\d+)/);
-    return match ? parseInt(match[1]) : 997;
+    } catch (e) { return null; }
   }
 
   function parseBundlePairs(raw) {
     if (!raw) return [];
-    return raw
-      .split('|')
-      .map(part => part.trim())
-      .filter(Boolean)
-      .map(part => {
-        const gidMatch = part.match(/^(gid:\/\/shopify\/ProductVariant\/\d+):(\d+):(.+)$/);
-        if (!gidMatch) return null;
-        const fullGid = gidMatch[1];
-        const quantity = parseInt(gidMatch[2]) || 1;
-        const label = gidMatch[3];
-        const numericId = fullGid.split('/').pop();
-        return {
-          variantId: numericId,
-          quantity,
-          label,
-          sortIndex: getPairSortIndex(label)
-        };
-      })
-      .filter(Boolean);
+    return raw.split('|').map(p => p.trim()).filter(Boolean).map(part => {
+      const match = part.match(/^(gid:\/\/shopify\/ProductVariant\/\d+):(\d+):(.+)$/);
+      if (!match) return null;
+      return {
+        variantId: match[1].split('/').pop(),
+        quantity: parseInt(match[2]) || 1,
+        label: match[3]
+      };
+    }).filter(Boolean);
   }
 
-  // --- 2. THE DISPLAY LOGIC (HYDRATION) ---
-
+  // --- 2. HYDRATION (The Core Fix) ---
   async function hydrateBundleItems() {
-    // If we are already working, stop here to prevent overlapping runs
+    // Stop if already running
     if (isHydrating) return;
-
+    
     const bundleParents = document.querySelectorAll('[data-bundle-key]');
     if (!bundleParents.length) return;
 
-    const cartDrawer = document.querySelector('cart-drawer');
     isHydrating = true;
-
-    // CRITICAL: Stop the observer while we modify the DOM
-    // This stops the script from triggering itself when it adds socks to the list
-    if (observer) observer.disconnect();
+    
+    // Stop the observer so we don't trigger ourselves
+    if (window.bundleObserver) window.bundleObserver.disconnect();
 
     try {
       const res = await fetch('/cart.js');
@@ -72,183 +48,118 @@
 
       for (const parentEl of bundleParents) {
         const bundleKey = parentEl.dataset.bundleKey;
-        if (!bundleKey) continue;
-
         const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
-        if (!pairsList) continue;
+        if (!pairsList || !bundleKey) continue;
 
-        // Find the specific parent item for this bundle
-        const parentItem = cart.items.find(
-          item => item.properties?._bundleKey === bundleKey && item.properties?._isParent === 'true'
+        // Find the parent data
+        const parentItem = cart.items.find(item => 
+          item.properties?._bundleKey === bundleKey && item.properties?._isParent === 'true'
         );
         if (!parentItem) continue;
 
+        // FIX: Wipe the list immediately before fetching variants
+        pairsList.innerHTML = '<li class="loading-bundles" style="list-style:none; font-size:12px; opacity:0.6;">Updating items...</li>';
+
         const children = parseBundlePairs(parentItem.properties._bundle_pairs);
-        children.sort((a, b) => a.sortIndex - b.sortIndex);
         const parentQty = parentItem.quantity || 1;
+        const variants = await Promise.all(children.map(c => fetchVariant(c.variantId)));
 
-        // CLEAR the existing list before building it again
+        // Clear the "Updating..." message
         pairsList.innerHTML = '';
-
-        const variants = await Promise.all(
-          children.map(child => fetchVariant(child.variantId))
-        );
 
         children.forEach((child, index) => {
           const variant = variants[index];
           const li = document.createElement('li');
           li.className = 'bundle-pair-item';
-
           li.innerHTML = `
-            <div class="bundle-pair-item__inner">
+            <div class="bundle-pair-item__inner" style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
               <div class="bundle-pair-item__img-wrap">
-                ${variant?.featured_image?.src ? `<img src="${variant.featured_image.src}" width="40" height="40" class="bundle-pair-item__img" loading="eager">` : ''}
+                ${variant?.featured_image?.src ? `<img src="${variant.featured_image.src}" width="40" height="40" style="object-fit:cover;">` : ''}
               </div>
               <div class="bundle-pair-item__info">
-                <span class="bundle-pair-item__label">${child.quantity * parentQty} × ${variant?.product_title || 'Stepzz Grip Socks'}</span>
-                <span class="bundle-pair-item__value">${variant?.title || ''}</span>
+                <div style="font-weight:bold; font-size:13px;">${child.quantity * parentQty} × ${variant?.product_title || 'Item'}</div>
+                <div style="font-size:11px; opacity:0.7;">${variant?.title || ''}</div>
               </div>
             </div>
           `;
           pairsList.appendChild(li);
         });
 
-        const toggleBtn = parentEl.querySelector('[data-bundle-toggle]');
-        if (toggleBtn) {
-          toggleBtn.textContent = `Hide ${children.length} items ▲`;
-          toggleBtn.setAttribute('aria-expanded', 'true');
-        }
-
         initToggle(parentEl);
       }
+    } catch (e) {
+      console.error("Bundle Display Error:", e);
     } finally {
       isHydrating = false;
-      // RESTART the observer now that the DOM changes are finished
-      if (cartDrawer) {
-        observer.observe(cartDrawer, { childList: true, subtree: true });
+      // Restart the observer
+      const cartDrawer = document.querySelector('cart-drawer');
+      if (cartDrawer && window.bundleObserver) {
+        window.bundleObserver.observe(cartDrawer, { childList: true, subtree: true });
       }
     }
   }
 
-  // --- 3. THE TOGGLE & REMOVE LOGIC ---
+  // --- 3. TOGGLE & REMOVE ---
+  function initToggle(parentEl) {
+    const btn = parentEl.querySelector('[data-bundle-toggle]');
+    const list = parentEl.querySelector('[data-bundle-pairs-list]');
+    if (!btn || !list || btn.dataset.bound === "true") return;
 
-  function initToggle(cartItemEl) {
-    const toggleBtn = cartItemEl.querySelector('[data-bundle-toggle]');
-    const pairsList = cartItemEl.querySelector('[data-bundle-pairs-list]');
-
-    if (!toggleBtn || !pairsList) return;
-    if (toggleBtn.dataset.toggleInitialized === "true") return;
-
-    toggleBtn.dataset.toggleInitialized = "true";
-
-    toggleBtn.addEventListener('click', (e) => {
+    btn.dataset.bound = "true";
+    btn.addEventListener('click', (e) => {
       e.preventDefault();
-      const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
-      const pairCount = pairsList.querySelectorAll('.bundle-pair-item').length;
-
-      if (isExpanded) {
-        pairsList.style.display = 'none';
-        toggleBtn.textContent = `Show ${pairCount} items ▼`;
-        toggleBtn.setAttribute('aria-expanded', 'false');
-      } else {
-        pairsList.style.display = '';
-        toggleBtn.textContent = `Hide ${pairCount} items ▲`;
-        toggleBtn.setAttribute('aria-expanded', 'true');
-      }
+      const isHidden = list.style.display === 'none';
+      list.style.display = isHidden ? '' : 'none';
+      btn.textContent = isHidden ? 'Hide items ▲' : `Show items ▼`;
     });
   }
 
   function handleBundleRemove() {
     document.addEventListener('click', async (e) => {
-      const removeBtn = e.target.closest('.cart-bundle-remove[data-bundle-key]');
-      if (!removeBtn) return;
-
-      const bundleKey = removeBtn.dataset.bundleKey;
-      if (!bundleKey) return;
+      const btn = e.target.closest('.cart-bundle-remove[data-bundle-key]');
+      if (!btn) return;
 
       e.preventDefault();
-      e.stopImmediatePropagation();
-
-      removeBtn.innerHTML = '<span style="opacity:0.4">⏳</span>';
-      removeBtn.disabled = true;
+      const bundleKey = btn.dataset.bundleKey;
+      btn.innerHTML = 'Removing...';
+      btn.style.pointerEvents = 'none';
 
       try {
-        const cartRes = await fetch('/cart.js');
-        const cart = await cartRes.json();
-
-        const parentItem = cart.items.find(
-          item => item.properties?._bundleKey === bundleKey && item.properties?._isParent === 'true'
-        );
-
-        if (!parentItem) return;
-
-        // 1. Remove parent bundle item
-        await fetch('/cart/change.js', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: parentItem.key, quantity: 0 }),
-        });
-
-        // 2. Refresh drawer section HTML
-        const html = await fetch('/?section_id=cart-drawer').then(r => r.text());
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-
-        const newInner = doc.querySelector('.drawer__inner');
-        const oldInner = document.querySelector('.drawer__inner');
-        if (newInner && oldInner) oldInner.innerHTML = newInner.innerHTML;
-
-        const newCount = doc.querySelector('.cart-count-bubble');
-        const oldCount = document.querySelector('.cart-count-bubble');
-        if (newCount && oldCount) oldCount.innerHTML = newCount.innerHTML;
-
-        // 3. Handle Empty State
-        const cartDrawerEl = document.querySelector('cart-drawer');
-        const isEmpty = !doc.querySelector('.cart-item');
-
-        if (isEmpty && cartDrawerEl) {
-          cartDrawerEl.classList.add('is-empty');
-        } else {
-          cartDrawerEl?.classList.remove('is-empty');
-          hydrateBundleItems();
+        const cart = await fetch('/cart.js').then(r => r.json());
+        const item = cart.items.find(i => i.properties?._bundleKey === bundleKey && i.properties?._isParent === 'true');
+        
+        if (item) {
+          await fetch('/cart/change.js', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: item.key, quantity: 0 })
+          });
+          
+          // Force Dawn to update the drawer
+          if (document.querySelector('cart-drawer')) {
+             // This tells the Dawn theme to refresh itself
+             document.querySelector('cart-drawer').classList.add('is-loading');
+             window.location.reload(); // Simplest way to ensure clean state on remove
+          }
         }
-
-      } catch (err) {
-        console.error('Bundle remove error:', err);
-        window.location.reload();
-      }
-    }, true);
+      } catch (err) { window.location.reload(); }
+    });
   }
 
-  // --- 4. DEBOUNCE & EVENTS ---
-
-  function debouncedHydrate() {
+  // --- 4. INIT ---
+  const debouncedHydrate = () => {
     clearTimeout(hydrateTimer);
-    hydrateTimer = setTimeout(() => {
-      hydrateBundleItems();
-    }, 400);
-  }
+    hydrateTimer = setTimeout(hydrateBundleItems, 400);
+  };
 
-  const observer = new MutationObserver(debouncedHydrate);
+  window.bundleObserver = new MutationObserver(debouncedHydrate);
 
   document.addEventListener('DOMContentLoaded', () => {
-    const cartDrawer = document.querySelector('cart-drawer');
-    hydrateBundleItems();
     handleBundleRemove();
-    
-    if (cartDrawer) {
-      observer.observe(cartDrawer, { childList: true, subtree: true });
-    }
+    hydrateBundleItems();
+    const drawer = document.querySelector('cart-drawer');
+    if (drawer) window.bundleObserver.observe(drawer, { childList: true, subtree: true });
   });
 
-  document.addEventListener('cart:updated', () => {
-    isHydrating = false;
-    debouncedHydrate();
-  });
-
-  document.addEventListener('drawer:open', () => {
-    isHydrating = false;
-    debouncedHydrate();
-  });
-
+  document.addEventListener('cart:updated', debouncedHydrate);
 })();
