@@ -72,25 +72,6 @@
       .filter(Boolean);
   }
 
-  async function getCartBundleChildren() {
-    const res = await fetch('/cart.js');
-    const cart = await res.json();
-    const groups = {};
-
-    cart.items.forEach(item => {
-      const isParent = item.properties?._isParent === 'true';
-      const bundleKey = item.properties?._bundleKey;
-      const rawPairs = item.properties?._bundle_pairs;
-      if (!isParent || !bundleKey || !rawPairs) return;
-
-      const children = parseBundlePairs(rawPairs);
-      children.sort((a, b) => a.sortIndex - b.sortIndex);
-      groups[bundleKey] = { children };
-    });
-
-    return groups;
-  }
-
   async function hydrateBundleItems() {
     if (isHydrating) return;
 
@@ -106,7 +87,9 @@
       const res = await fetch('/cart.js');
       const cart = await res.json();
 
-      const groups = await getCartBundleChildren();
+      // Just read it directly from the HTML — no fetching!
+      const rawPairs = parentEl.dataset.bundlePairs;
+      const children = parseBundlePairs(rawPairs || '');
 
       for (const parentEl of bundleParents) {
         const bundleKey = parentEl.dataset.bundleKey;
