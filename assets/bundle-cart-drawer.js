@@ -83,7 +83,10 @@
       const rawPairs = parentEl.dataset.bundlePairs;
 
       // If there's no bundle pairs data yet, skip this parent for now
-      if (!rawPairs) continue;
+      if (!rawPairs) {
+         parentEl.dataset.bundleHydrated = 'pending';
+          continue;
+      }
 
       const parentQty = parseInt(parentEl.dataset.bundleQty) || 1;
       const children = parseBundlePairs(rawPairs);
