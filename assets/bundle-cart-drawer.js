@@ -87,15 +87,25 @@
     if (!bundleParents.length) return;
 
     isHydrating = true;
+    // 1. Temporarily stop observing to prevent infinite loops
+    if (observer) observer.disconnect();
 
     try {
-      const groups = await getCartBundleChildren();
+      const res = await fetch('/cart.js');
+      const cart = await res.json();
+
+      const groups = await getCartBundleChildren();  
 
       for (const parentEl of bundleParents) {
         const bundleKey = parentEl.dataset.bundleKey;
         if (!bundleKey) continue;
-
-        if (parentEl.querySelector('.bundle-pair-item')) continue;
+      //CHANGE
+      // If bundle items already exist, we still need to ensure the toggle works
+      // because the cart drawer may have been re-rendered via AJAX
+       //if (parentEl.querySelector('.bundle-pair-item')) {
+          //   initToggle(parentEl); // Reattach toggle click event
+        //     continue; // Skip rebuilding bundle items again
+        //}
 
         const children = groups[bundleKey]?.children || [];
         const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
@@ -103,7 +113,7 @@
 
         if (!pairsList) continue;
 
-        pairsList.innerHTML = '';
+         pairsList.innerHTML = '';
 
         if (toggleBtn) {
           toggleBtn.textContent = `Hide ${children.length} items ▲`;
@@ -114,8 +124,7 @@
           children.map(child => child.variantId ? fetchVariant(child.variantId) : null)
         );
         // Get parent cart quantity
-        const res = await fetch('/cart.js').then(r => r.json());
-        const parentCartItem = res.items.find(
+        const parentCartItem = cart.items.find(
            item => item.properties?._bundleKey === bundleKey && item.properties?._isParent === 'true'
            );
         const parentQty = parentCartItem?.quantity || 1;
@@ -147,7 +156,7 @@
 
         const labelEl = document.createElement('span');
         labelEl.className = 'bundle-pair-item__label';
-        labelEl.textContent = `${child.quantity * parentQty} × Stepzz Grip Socks`;
+       labelEl.textContent = `${child.quantity * parentQty} × ${variant?.product_title || 'Stepzz Grip Socks'}`;//changed the hardcoded name to dynamic title fetching
 
           const value = document.createElement('span');
           value.className = 'bundle-pair-item__value';
@@ -165,35 +174,63 @@
       }
     } finally {
       isHydrating = false;
+      if (cartDrawer) {
+      observer.observe(cartDrawer, { childList: true, subtree: true });
+    }
     }
   }
-
+  //CHANGE:
   function initToggle(cartItemEl) {
-    const toggleBtn = cartItemEl.querySelector('[data-bundle-toggle]');
-    const pairsList = cartItemEl.querySelector('[data-bundle-pairs-list]');
-    if (!toggleBtn || !pairsList) return;
+  const toggleBtn = cartItemEl.querySelector('[data-bundle-toggle]');
+  const pairsList = cartItemEl.querySelector('[data-bundle-pairs-list]');
 
-    const newBtn = toggleBtn.cloneNode(true);
-    toggleBtn.parentNode.replaceChild(newBtn, toggleBtn);
+  // Stop if required elements are missing
+  if (!toggleBtn || !pairsList) return;
 
-    newBtn.addEventListener('click', () => {
-      const isExpanded = newBtn.getAttribute('aria-expanded') === 'true';
-      const pairCount = pairsList.querySelectorAll('.bundle-pair-item').length;
-      if (isExpanded) {
-        pairsList.style.display = 'none';
-        newBtn.textContent = `Show ${pairCount} items ▼`;
-        newBtn.setAttribute('aria-expanded', 'false');
-      } else {
-        pairsList.style.display = '';
-        newBtn.textContent = `Hide ${pairCount} items ▲`;
-        newBtn.setAttribute('aria-expanded', 'true');
-      }
-    });
-  }
+  // Prevent attaching the same event listener multiple times
+  // because hydrateBundleItems() can run repeatedly
+  if (toggleBtn.dataset.toggleInitialized === "true") return;
+
+  // Mark toggle as initialized
+  toggleBtn.dataset.toggleInitialized = "true";
+
+  // Add click listener for show/hide behaviour
+  toggleBtn.addEventListener('click', () => {
+
+    // Check current state of toggle button
+    const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+
+    // Count number of bundle items
+    const pairCount = pairsList.querySelectorAll('.bundle-pair-item').length;
+
+    if (isExpanded) {
+
+      // Hide bundle items
+      pairsList.style.display = 'none';
+
+      // Update button text
+      toggleBtn.textContent = `Show ${pairCount} items ▼`;
+
+      // Update accessibility attribute
+      toggleBtn.setAttribute('aria-expanded', 'false');
+
+    } else {
+
+      // Show bundle items
+      pairsList.style.display = '';
+
+      // Update button text
+      toggleBtn.textContent = `Hide ${pairCount} items ▲`;
+
+      // Update accessibility attribute
+      toggleBtn.setAttribute('aria-expanded', 'true');
+    }
+  });
+}
 
   function handleBundleRemove() {
     document.addEventListener('click', async (e) => {
-      const removeBtn = e.target.closest('.cart-remove-button[data-bundle-key]');
+      const removeBtn = e.target.closest('.cart-bundle-remove[data-bundle-key]');
       if (!removeBtn) return;
 
       const bundleKey = removeBtn.dataset.bundleKey;
@@ -253,11 +290,26 @@
       }
     }, true);
   }
-
+//Changes
   function debouncedHydrate() {
-    clearTimeout(hydrateTimer);
-    hydrateTimer = setTimeout(() => hydrateBundleItems(), 300);
-  }
+  clearTimeout(hydrateTimer);
+  hydrateTimer = setTimeout(() => {
+    isHydrating = false; // ← ADD THIS: reset guard before each debounced call
+    hydrateBundleItems();
+  }, 400); // ← slightly longer to ensure drawer HTML is fully painted
+}
+//change:
+// Listen for Dawn's custom cart update events
+document.addEventListener('cart:updated', () => {
+  isHydrating = false;
+  debouncedHydrate();
+});
+
+// Also hook into drawer open — Dawn dispatches this
+document.addEventListener('drawer:open', () => {
+  isHydrating = false;
+  debouncedHydrate();
+});
 
   document.addEventListener('DOMContentLoaded', () => {
     preloadAllBundleImages();
@@ -266,6 +318,10 @@
   });
 
   const observer = new MutationObserver(debouncedHydrate);
-  observer.observe(document.body, { childList: true, subtree: true });
+  //change:limited observer to cart drawer only
+  const cartDrawer = document.querySelector('cart-drawer');
+  if (cartDrawer) {
+  observer.observe(cartDrawer, { childList: true, subtree: true });
+   }
 
 })();
