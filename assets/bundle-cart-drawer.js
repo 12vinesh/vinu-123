@@ -152,7 +152,7 @@
 
         const labelEl = document.createElement('span');
         labelEl.className = 'bundle-pair-item__label';
-       labelEl.textContent = `${child.quantity * parentQty} × ${variant?.product_title || 'Item'}`;
+       labelEl.textContent = `${child.quantity * parentQty} × ${variant?.product_title || 'Item'}`;//changed the hardcoded name
 
           const value = document.createElement('span');
           value.className = 'bundle-pair-item__value';
