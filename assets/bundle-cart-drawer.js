@@ -16,6 +16,7 @@ async function fetchVariant(variantId) {
     const res = await fetch(`/variants/${variantId}.js`);
     const data = await res.json();
     variantCache[variantId] = data;
+    console.log("Fetching variant:", variantId);
     return data;
   } catch (e) {
     return null;
