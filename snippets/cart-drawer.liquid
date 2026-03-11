@@ -119,7 +119,7 @@
 
 <tbody role="rowgroup">
   {%- for item in cart.items -%}
-
+      <!-- {{ item.title }} | isChild: {{ item.properties._isChild }} | isParent: {{ item.properties._isParent }} -->
     {%- comment -%} Detect bundle type {%- endcomment -%}
     {%- assign is_bundle_parent = false -%}
     {%- assign is_bundle_child = false -%}
