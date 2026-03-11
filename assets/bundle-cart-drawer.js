@@ -111,7 +111,7 @@
 
         if (!pairsList) continue;
 
-       pairsList.replaceChildren();//changeed dom reset
+         pairsList.innerHTML = '';
 
         if (toggleBtn) {
           toggleBtn.textContent = `Hide ${children.length} items ▲`;
