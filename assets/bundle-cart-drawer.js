@@ -111,7 +111,7 @@
 
         if (!pairsList) continue;
 
-        pairsList.innerHTML = '';
+       pairsList.replaceChildren();//changeed dom reset
 
         if (toggleBtn) {
           toggleBtn.textContent = `Hide ${children.length} items ▲`;
@@ -293,6 +293,7 @@
     hydrateBundleItems();
   }, 400); // ← slightly longer to ensure drawer HTML is fully painted
 }
+//change:
 // Listen for Dawn's custom cart update events
 document.addEventListener('cart:updated', () => {
   isHydrating = false;
@@ -312,6 +313,10 @@ document.addEventListener('drawer:open', () => {
   });
 
   const observer = new MutationObserver(debouncedHydrate);
-  observer.observe(document.body, { childList: true, subtree: true });
+  //change:limited observer to cart drawer only
+  const cartDrawer = document.querySelector('cart-drawer');
+  if (cartDrawer) {
+  observer.observe(cartDrawer, { childList: true, subtree: true });
+   }
 
 })();
