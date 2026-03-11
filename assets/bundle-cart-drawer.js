@@ -272,7 +272,7 @@ function setupBundleToggleDelegation() {
   handleBundleRemove();
   setupBundleToggleDelegation();
 
-  cartDrawer = document.querySelector('#CartDrawer');
+  cartDrawer = document.querySelector('#CartDrawer-CartItems');
   if (cartDrawer) {
     observer.observe(cartDrawer, { childList: true, subtree: true });
   } else {
