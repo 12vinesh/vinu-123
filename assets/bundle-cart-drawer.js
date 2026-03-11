@@ -139,7 +139,7 @@
         pairsList.appendChild(li);
       });
 
-      initToggle(parentEl);
+    
     }
   } finally {
     isHydrating = false;
