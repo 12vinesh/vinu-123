@@ -273,6 +273,9 @@
     debouncedHydrate();
   });
    
+  document.addEventListener('cart:rendered', () => {
+  debouncedHydrate();
+   });
   // FIX 1: All DOM-dependent setup moved inside DOMContentLoaded
   document.addEventListener('DOMContentLoaded', () => {
     preloadAllBundleImages();
