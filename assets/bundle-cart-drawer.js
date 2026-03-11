@@ -308,6 +308,7 @@
 
   // Declare observer at module level (used by safe helpers above), but attach in DOMContentLoaded
   const observer = new MutationObserver((mutations) => {
+  if(isHydrating) return;
   for (const mutation of mutations) {
     if (mutation.addedNodes.length) {
       debouncedHydrate();
