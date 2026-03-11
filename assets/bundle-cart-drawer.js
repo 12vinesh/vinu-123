@@ -280,7 +280,7 @@ function setupBundleToggleDelegation() {
     const bodyObserver = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
-          if (node.nodeType === 1 && node.matches?.('cart-drawer')) {
+          if (node.nodeType === 1 && node.matches?.('#CartDrawer-CartItems')) {
             cartDrawer = node;
             observer.observe(cartDrawer, { childList: true, subtree: true });
             bodyObserver.disconnect();
