@@ -6,15 +6,7 @@
   let hydrateTimer = null;
   let cartDrawer = null; // FIX 1: declare here, assign in DOMContentLoaded
 
-  // FIX 2: Safe observer helpers to avoid ReferenceError on first run
-  function safeObserverDisconnect() {
-    try { observer.disconnect(); } catch (e) {}
-  }
-  function safeObserverReconnect() {
-    try {
-      if (cartDrawer) observer.observe(cartDrawer, { childList: true, subtree: true });
-    } catch (e) {}
-  }
+ 
 
   async function fetchVariant(variantId) {
     if (variantCache[variantId]) return variantCache[variantId];
