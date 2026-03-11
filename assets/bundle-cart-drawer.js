@@ -89,7 +89,10 @@
     isHydrating = true;
 
     try {
-      const groups = await getCartBundleChildren();
+      const res = await fetch('/cart.js');
+      const cart = await res.json();
+
+      const groups = await getCartBundleChildren();  
 
       for (const parentEl of bundleParents) {
         const bundleKey = parentEl.dataset.bundleKey;
