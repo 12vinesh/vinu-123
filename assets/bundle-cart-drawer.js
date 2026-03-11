@@ -75,7 +75,7 @@
   try {
     for (const parentEl of bundleParents) {
       // Skip if already hydrated
-      if (parentEl.dataset.bundleHydrated === 'true') continue;
+     if (parentEl.querySelector('.bundle-pair-item')) continue;
 
       const bundleKey = parentEl.dataset.bundleKey;
       if (!bundleKey) continue;
