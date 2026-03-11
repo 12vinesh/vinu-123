@@ -156,6 +156,29 @@
   }
 }
 //Change:
+function ensureFirstHydrationAfterOpen() {
+  let attempts = 0;
+  const maxAttempts = 15; // 15 * 100ms = 1.5 seconds
+  const interval = setInterval(async () => {
+    attempts += 1;
+
+    // Find any bundle parent that has pairs but is not hydrated yet
+    const pendingParents = Array.from(
+      document.querySelectorAll('[data-bundle-key]')
+    ).filter((el) => el.dataset.bundlePairs && el.dataset.bundleHydrated !== 'true');
+
+    if (pendingParents.length > 0) {
+      await hydrateBundleItems();
+      clearInterval(interval);
+      return;
+    }
+
+    if (attempts >= maxAttempts) {
+      clearInterval(interval);
+    }
+  }, 100);
+}
+//Change:
 function setupBundleToggleDelegation() {
   document.addEventListener('click', (event) => {
     const btn = event.target.closest('[data-bundle-toggle]');
