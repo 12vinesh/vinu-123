@@ -94,8 +94,8 @@ isHydrating = true;
 
 try {
 
-for (const parentEl of bundleParents) {
-
+for (let parentEl of bundleParents) {
+  
   if (parentEl.querySelector('.bundle-pair-item')) continue;
 
   const bundleKey = parentEl.dataset.bundleKey;
@@ -127,8 +127,18 @@ for (const parentEl of bundleParents) {
   );
   //Change:
   if (!document.body.contains(parentEl)) {
-  console.log("Parent replaced after fetch");
-  continue;
+  console.log("Parent replaced after fetch — requerying");
+
+  const newParent = document.querySelector(
+    `.bundle-pairs[data-bundle-key="${bundleKey}"]`
+  );
+
+  if (!newParent) continue;
+
+  parentEl = newParent;
+  pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
+
+  if (!pairsList) continue;
 }
  
   children.forEach((child,index)=>{
