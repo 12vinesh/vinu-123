@@ -77,6 +77,7 @@
       if (!bundleKey) continue;
 
       const rawPairs = parentEl.dataset.bundlePairs;
+      if(!rawPairs) continue;
       const parentQty = parseInt(parentEl.dataset.bundleQty) || 1;
       const children = parseBundlePairs(rawPairs || '');
 
@@ -86,7 +87,7 @@
 
       pairsList.innerHTML = '';
 
-      if (toggleBtn) {
+      if (toggleBtn && children.length > 0) {
         toggleBtn.textContent = `Hide ${children.length} items ▲`;
         toggleBtn.setAttribute('aria-expanded', 'true');
       }
