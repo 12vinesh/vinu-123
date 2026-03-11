@@ -86,16 +86,16 @@
     try {
       const res = await fetch('/cart.js');
       const cart = await res.json();
-
-      // Just read it directly from the HTML — no fetching!
-      const rawPairs = parentEl.dataset.bundlePairs;
-      const children = parseBundlePairs(rawPairs || '');
+       
+     
 
       for (const parentEl of bundleParents) {
         const bundleKey = parentEl.dataset.bundleKey;
         if (!bundleKey) continue;
-
-        const children = groups[bundleKey]?.children || [];
+         //CHANGE:
+        // Just read it directly from the HTML — no fetching!
+        const rawPairs = parentEl.dataset.bundlePairs;
+        const children = parseBundlePairs(rawPairs || '');
         const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
         const toggleBtn = parentEl.querySelector('[data-bundle-toggle]');
 
@@ -274,7 +274,7 @@
     clearTimeout(hydrateTimer);
     hydrateTimer = setTimeout(() => {
       hydrateBundleItems();
-    }, 400);
+    }, 50);
   }
 
   // FIX 3: Removed `isHydrating = false` resets from event listeners
