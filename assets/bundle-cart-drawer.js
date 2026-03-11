@@ -300,6 +300,7 @@ function setupBundleToggleDelegation() {
    //CHANGE:
   // FIX 1: All DOM-dependent setup moved inside DOMContentLoaded
   document.addEventListener('DOMContentLoaded', () => {
+  console.log("DOM loaded");
   preloadAllBundleImages();
   hydrateBundleItems();
   handleBundleRemove();
