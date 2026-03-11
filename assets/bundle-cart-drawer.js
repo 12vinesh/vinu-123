@@ -173,7 +173,7 @@
         initToggle(parentEl);
       }
     } finally {
-      isHydrating = false;
+      isHydrating = false;//change
       if (cartDrawer) {
       observer.observe(cartDrawer, { childList: true, subtree: true });
     }
