@@ -145,7 +145,7 @@
     isHydrating = false;
 
   }
-}
+}//Change:
 function setupBundleToggleDelegation() {
   document.addEventListener('click', (event) => {
     const btn = event.target.closest('[data-bundle-toggle]');
@@ -273,6 +273,7 @@ function setupBundleToggleDelegation() {
   preloadAllBundleImages();
   hydrateBundleItems();
   handleBundleRemove();
+  setupBundleToggleDelegation();
 
   cartDrawer = document.querySelector('#CartDrawer');
   if (cartDrawer) {
