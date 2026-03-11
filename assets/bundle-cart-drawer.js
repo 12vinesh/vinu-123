@@ -174,9 +174,7 @@
       }
     } finally {
       isHydrating = false;
-      if (cartDrawer) {
-      observer.observe(cartDrawer, { childList: true, subtree: true });
-    }
+      
     }
   }
   //CHANGE:
@@ -315,13 +313,14 @@ document.addEventListener('drawer:open', () => {
     preloadAllBundleImages();
     hydrateBundleItems();
     handleBundleRemove();
+    //change:limited observer to cart drawer only
+      const cartDrawer = document.querySelector('cart-drawer');
+      if (cartDrawer) {
+        observer.observe(cartDrawer, { childList: true, subtree: true });
+   }
   });
 
   const observer = new MutationObserver(debouncedHydrate);
-  //change:limited observer to cart drawer only
-  const cartDrawer = document.querySelector('cart-drawer');
-  if (cartDrawer) {
-  observer.observe(cartDrawer, { childList: true, subtree: true });
-   }
+  
 
 })();
