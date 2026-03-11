@@ -113,11 +113,7 @@ for (const parentEl of bundleParents) {
   const toggleBtn = parentEl.querySelector('[data-bundle-toggle]');
   if (!pairsList) continue;
   console.log("Pairs list:", pairsList);
-  //Change:
-  if (!document.body.contains(parentEl)) {
-  console.log("Parent replaced during hydration");
-  continue;
-}
+  
 
   pairsList.innerHTML = '';
 
@@ -129,6 +125,11 @@ for (const parentEl of bundleParents) {
   const variants = await Promise.all(
     children.map(child => fetchVariant(child.variantId))
   );
+  //Change:
+  if (!document.body.contains(parentEl)) {
+  console.log("Parent replaced after fetch");
+  continue;
+}
  
   children.forEach((child,index)=>{
 
