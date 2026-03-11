@@ -394,16 +394,22 @@
 
     const selectedSizeEl = sizeGroup.querySelector(".selected-value");
     const selectedSize = selectedSizeEl ? selectedSizeEl.textContent.trim().replace(/\s+/g, " ") : "";
-    //Changes hidden properties
+
     if (selectedColor && selectedSize) {
-  const cleanTitle = pairTitle.replace(":", "").trim();
+      const cleanTitle = pairTitle.replace(":", "").trim();
 
-  // Now hidden from checkout (underscore prefix)
-  properties[`_${cleanTitle}`] = `${selectedColor} (${selectedSize})`;
+      // Visible property — shows in checkout
+      properties[cleanTitle] = `${selectedColor} (${selectedSize})`;
 
-  if (variantId) {
-    properties[`_${cleanTitle} Variant ID`] = variantId;
-  }
+      // Hidden property — underscore hides from checkout display
+      if (variantId) {
+        properties[`_${cleanTitle} Variant ID`] = variantId;
+      }
+
+      // Collect for Cart Transform single attribute
+      variantIds.push(variantId);
+      pairLabels.push(cleanTitle);
+    }
   }); // ← closing forEach
    /** ----------------------------------------------------------
    * Changes made for cart transform
