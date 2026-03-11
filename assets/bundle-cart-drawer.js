@@ -87,6 +87,8 @@
     if (!bundleParents.length) return;
 
     isHydrating = true;
+    // 1. Temporarily stop observing to prevent infinite loops
+    if (observer) observer.disconnect();
 
     try {
       const res = await fetch('/cart.js');
