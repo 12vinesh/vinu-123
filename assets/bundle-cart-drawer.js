@@ -260,7 +260,7 @@
   document.addEventListener('cart:updated', () => {
     debouncedHydrate();
   });
-
+  //Change:
   document.addEventListener('drawer:open', () => {
   // Make sure we grab cart-drawer even if it was injected after DOMContentLoaded
   if (!cartDrawer || !document.body.contains(cartDrawer)) {
