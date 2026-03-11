@@ -284,6 +284,23 @@ function setupBundleToggleDelegation() {
       hydrateBundleItems();
     }, 150);
   }
+  function attachDrawerObserver() {
+  const drawer = document.querySelector('.drawer__inner');
+
+  if (!drawer) {
+    requestAnimationFrame(attachDrawerObserver);
+    return;
+  }
+
+  console.log("Drawer found → observer attached");
+
+  observer.observe(drawer, {
+    childList: true,
+    subtree: true
+  });
+}
+
+
 
  
   //Change:
@@ -305,11 +322,8 @@ function setupBundleToggleDelegation() {
   hydrateBundleItems();
   handleBundleRemove();
   setupBundleToggleDelegation();
-
-  cartDrawer = document.querySelector('.drawer__inner');
-  if (cartDrawer) {
-    observer.observe(cartDrawer, { childList: true, subtree: true });
-  } 
+  attachDrawerObserver();
+  
 });
 
   // Declare observer at module level (used by safe helpers above), but attach in DOMContentLoaded
