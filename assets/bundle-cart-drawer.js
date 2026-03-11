@@ -4,6 +4,17 @@
   const variantCache = {};
   let isHydrating = false;
   let hydrateTimer = null;
+  let cartDrawer = null; // FIX 1: declare here, assign in DOMContentLoaded
+
+  // FIX 2: Safe observer helpers to avoid ReferenceError on first run
+  function safeObserverDisconnect() {
+    try { observer.disconnect(); } catch (e) {}
+  }
+  function safeObserverReconnect() {
+    try {
+      if (cartDrawer) observer.observe(cartDrawer, { childList: true, subtree: true });
+    } catch (e) {}
+  }
 
   async function fetchVariant(variantId) {
     if (variantCache[variantId]) return variantCache[variantId];
@@ -27,7 +38,7 @@
           pairs.forEach(pair => fetchVariant(pair.variantId));
         }
       });
-    } catch(e) {}
+    } catch (e) {}
   }
 
   function getPairSortIndex(label) {
@@ -87,25 +98,19 @@
     if (!bundleParents.length) return;
 
     isHydrating = true;
-    // 1. Temporarily stop observing to prevent infinite loops
-    if (observer) observer.disconnect();
+
+    // FIX 2: Use safe disconnect helper
+    safeObserverDisconnect();
 
     try {
       const res = await fetch('/cart.js');
       const cart = await res.json();
 
-      const groups = await getCartBundleChildren();  
+      const groups = await getCartBundleChildren();
 
       for (const parentEl of bundleParents) {
         const bundleKey = parentEl.dataset.bundleKey;
         if (!bundleKey) continue;
-      //CHANGE
-      // If bundle items already exist, we still need to ensure the toggle works
-      // because the cart drawer may have been re-rendered via AJAX
-       if (parentEl.querySelector('.bundle-pair-item')) {
-          //   initToggle(parentEl); // Reattach toggle click event
-           continue; // Skip rebuilding bundle items again
-        //}
 
         const children = groups[bundleKey]?.children || [];
         const pairsList = parentEl.querySelector('[data-bundle-pairs-list]');
@@ -113,7 +118,7 @@
 
         if (!pairsList) continue;
 
-         pairsList.innerHTML = '';
+        pairsList.innerHTML = '';
 
         if (toggleBtn) {
           toggleBtn.textContent = `Hide ${children.length} items ▲`;
@@ -123,10 +128,10 @@
         const variants = await Promise.all(
           children.map(child => child.variantId ? fetchVariant(child.variantId) : null)
         );
-        // Get parent cart quantity
+
         const parentCartItem = cart.items.find(
-           item => item.properties?._bundleKey === bundleKey && item.properties?._isParent === 'true'
-           );
+          item => item.properties?._bundleKey === bundleKey && item.properties?._isParent === 'true'
+        );
         const parentQty = parentCartItem?.quantity || 1;
 
         children.forEach((child, index) => {
@@ -154,9 +159,9 @@
           const info = document.createElement('div');
           info.className = 'bundle-pair-item__info';
 
-        const labelEl = document.createElement('span');
-        labelEl.className = 'bundle-pair-item__label';
-       labelEl.textContent = `${child.quantity * parentQty} × ${variant?.product_title || 'Stepzz Grip Socks'}`;//changed the hardcoded name to dynamic title fetching
+          const labelEl = document.createElement('span');
+          labelEl.className = 'bundle-pair-item__label';
+          labelEl.textContent = `${child.quantity * parentQty} × ${variant?.product_title || 'Stepzz Grip Socks'}`;
 
           const value = document.createElement('span');
           value.className = 'bundle-pair-item__value';
@@ -174,57 +179,47 @@
       }
     } finally {
       isHydrating = false;
-      
+      // FIX 2: Use safe reconnect helper
+      safeObserverReconnect();
     }
   }
-  //CHANGE:
+
+  // FIX 5: Extract listener logic into standalone helper
+  function attachToggleListener(btn, pairsList) {
+    btn.addEventListener('click', () => {
+      const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+      const pairCount = pairsList.querySelectorAll('.bundle-pair-item').length;
+      if (isExpanded) {
+        pairsList.style.display = 'none';
+        btn.textContent = `Show ${pairCount} items ▼`;
+        btn.setAttribute('aria-expanded', 'false');
+      } else {
+        pairsList.style.display = '';
+        btn.textContent = `Hide ${pairCount} items ▲`;
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    });
+  }
+
+  // FIX 5: Clone button to strip stale listeners after DOM re-renders
   function initToggle(cartItemEl) {
-  const toggleBtn = cartItemEl.querySelector('[data-bundle-toggle]');
-  const pairsList = cartItemEl.querySelector('[data-bundle-pairs-list]');
+    let toggleBtn = cartItemEl.querySelector('[data-bundle-toggle]');
+    const pairsList = cartItemEl.querySelector('[data-bundle-pairs-list]');
 
-  // Stop if required elements are missing
-  if (!toggleBtn || !pairsList) return;
+    if (!toggleBtn || !pairsList) return;
 
-  // Prevent attaching the same event listener multiple times
-  // because hydrateBundleItems() can run repeatedly
-  if (toggleBtn.dataset.toggleInitialized === "true") return;
-
-  // Mark toggle as initialized
-  toggleBtn.dataset.toggleInitialized = "true";
-
-  // Add click listener for show/hide behaviour
-  toggleBtn.addEventListener('click', () => {
-
-    // Check current state of toggle button
-    const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
-
-    // Count number of bundle items
-    const pairCount = pairsList.querySelectorAll('.bundle-pair-item').length;
-
-    if (isExpanded) {
-
-      // Hide bundle items
-      pairsList.style.display = 'none';
-
-      // Update button text
-      toggleBtn.textContent = `Show ${pairCount} items ▼`;
-
-      // Update accessibility attribute
-      toggleBtn.setAttribute('aria-expanded', 'false');
-
-    } else {
-
-      // Show bundle items
-      pairsList.style.display = '';
-
-      // Update button text
-      toggleBtn.textContent = `Hide ${pairCount} items ▲`;
-
-      // Update accessibility attribute
-      toggleBtn.setAttribute('aria-expanded', 'true');
+    if (toggleBtn.dataset.toggleInitialized === 'true') {
+      // Replace with a fresh clone to strip any stale event listeners
+      const fresh = toggleBtn.cloneNode(true);
+      fresh.removeAttribute('data-toggle-initialized');
+      toggleBtn.replaceWith(fresh);
+      toggleBtn = cartItemEl.querySelector('[data-bundle-toggle]');
+      if (!toggleBtn) return;
     }
-  });
-}
+
+    toggleBtn.dataset.toggleInitialized = 'true';
+    attachToggleListener(toggleBtn, pairsList);
+  }
 
   function handleBundleRemove() {
     document.addEventListener('click', async (e) => {
@@ -243,21 +238,24 @@
       try {
         const cart = await fetch('/cart.js').then(r => r.json());
 
-        const parentItem = cart.items.find(
+        // FIX 4: Remove ALL items belonging to this bundle (parent + children)
+        const bundleItems = cart.items.filter(
           item => item.properties?._bundleKey === bundleKey
-            && item.properties?._isParent === 'true'
         );
 
-        if (!parentItem) return;
+        if (!bundleItems.length) return;
 
-        // Remove item and fetch new section in parallel — faster!
-        await fetch('/cart/change.js', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: parentItem.key, quantity: 0 }),
+        const updates = {};
+        bundleItems.forEach(item => {
+          updates[item.key] = 0;
         });
 
-        // Single section fetch after removal
+        await fetch('/cart/update.js', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ updates }),
+        });
+
         const html = await fetch('/?section_id=cart-drawer').then(r => r.text());
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
@@ -271,7 +269,6 @@
         if (newCount && oldCount) oldCount.innerHTML = newCount.innerHTML;
         else if (oldCount) oldCount.innerHTML = '';
 
-        // Check empty state from section HTML (no extra fetch needed)
         const cartDrawerEl = document.querySelector('cart-drawer');
         const isEmpty = !doc.querySelector('.cart-item');
 
@@ -288,39 +285,38 @@
       }
     }, true);
   }
-//Changes
+
+  // FIX 3: Removed `isHydrating = false` from here — only `finally` block should reset it
   function debouncedHydrate() {
-  clearTimeout(hydrateTimer);
-  hydrateTimer = setTimeout(() => {
-    isHydrating = false; // ← ADD THIS: reset guard before each debounced call
-    hydrateBundleItems();
-  }, 400); // ← slightly longer to ensure drawer HTML is fully painted
-}
-//change:
-// Listen for Dawn's custom cart update events
-document.addEventListener('cart:updated', () => {
-  isHydrating = false;
-  debouncedHydrate();
-});
+    clearTimeout(hydrateTimer);
+    hydrateTimer = setTimeout(() => {
+      hydrateBundleItems();
+    }, 400);
+  }
 
-// Also hook into drawer open — Dawn dispatches this
-document.addEventListener('drawer:open', () => {
-  isHydrating = false;
-  debouncedHydrate();
-});
+  // FIX 3: Removed `isHydrating = false` resets from event listeners
+  document.addEventListener('cart:updated', () => {
+    debouncedHydrate();
+  });
 
+  document.addEventListener('drawer:open', () => {
+    debouncedHydrate();
+  });
+
+  // FIX 1: All DOM-dependent setup moved inside DOMContentLoaded
   document.addEventListener('DOMContentLoaded', () => {
     preloadAllBundleImages();
     hydrateBundleItems();
     handleBundleRemove();
-    //change:limited observer to cart drawer only
-      const cartDrawer = document.querySelector('cart-drawer');
-      if (cartDrawer) {
-        observer.observe(cartDrawer, { childList: true, subtree: true });
-   }
+
+    // FIX 1: cartDrawer query and observer.observe() now run after DOM is ready
+    cartDrawer = document.querySelector('cart-drawer');
+    if (cartDrawer) {
+      observer.observe(cartDrawer, { childList: true, subtree: true });
+    }
   });
 
+  // Declare observer at module level (used by safe helpers above), but attach in DOMContentLoaded
   const observer = new MutationObserver(debouncedHydrate);
-  
 
 })();
