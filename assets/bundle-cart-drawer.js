@@ -266,7 +266,7 @@ clearTimeout(hydrateTimer);
 
 hydrateTimer=setTimeout(()=>{
 hydrateBundleItems();
-},150);
+},200);
 
 }
 
