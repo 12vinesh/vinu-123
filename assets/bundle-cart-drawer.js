@@ -63,21 +63,19 @@
       .filter(Boolean);
   }
 
-  async function hydrateBundleItems() {
+ async function hydrateBundleItems() {
   if (isHydrating) return;
 
   const bundleParents = document.querySelectorAll('[data-bundle-key]');
   if (!bundleParents.length) return;
 
   isHydrating = true;
- 
 
   try {
     for (const parentEl of bundleParents) {
       const bundleKey = parentEl.dataset.bundleKey;
       if (!bundleKey) continue;
 
-      // ✅ Read everything from DOM — zero fetches
       const rawPairs = parentEl.dataset.bundlePairs;
       const parentQty = parseInt(parentEl.dataset.bundleQty) || 1;
       const children = parseBundlePairs(rawPairs || '');
@@ -93,7 +91,6 @@
         toggleBtn.setAttribute('aria-expanded', 'true');
       }
 
-      // ✅ Only fetch variant images — these are cached after first load
       const variants = await Promise.all(
         children.map(child => child.variantId ? fetchVariant(child.variantId) : null)
       );
@@ -139,13 +136,13 @@
         pairsList.appendChild(li);
       });
 
-    
+      // IMPORTANT: no initToggle(parentEl) here
     }
   } finally {
     isHydrating = false;
-
   }
-}//Change:
+}
+//Change:
 function setupBundleToggleDelegation() {
   document.addEventListener('click', (event) => {
     const btn = event.target.closest('[data-bundle-toggle]');
