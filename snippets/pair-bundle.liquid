@@ -230,6 +230,9 @@
           {% assign sizetext = selected_size.title %}
         {% assign mainsize = sizetext | split: " / " | first %}
       {{ mainsize }}
+      {% comment %}
+        Stepzz
+      {% endcomment %}
        {% unless template contains 'grip-socks' %}
         <i class="fa fa-check fa-check-size" aria-hidden="true"></i>
       {% endunless %}
