@@ -80,11 +80,75 @@
       "type": "built-in-set",
       "name": "Built In Set",
       "settings": {}
+    },
+    "avpc_product_quiz_KpMpca": {
+      "type": "avpc-product-quiz",
+      "blocks": {
+        "question_iHtyEd": {
+          "type": "question",
+          "settings": {
+            "question": "",
+            "answer_1": "",
+            "products_1": "",
+            "answer_2": "",
+            "products_2": "",
+            "answer_3": "",
+            "products_3": ""
+          }
+        },
+        "question_ptwL8W": {
+          "type": "question",
+          "settings": {
+            "question": "",
+            "answer_1": "",
+            "products_1": "",
+            "answer_2": "",
+            "products_2": "",
+            "answer_3": "",
+            "products_3": ""
+          }
+        }
+      },
+      "block_order": [
+        "question_iHtyEd",
+        "question_ptwL8W"
+      ],
+      "name": "Product quiz",
+      "settings": {
+        "quiz_heading": "Product Quiz",
+        "quiz_subheading": "",
+        "image": "shopify://shop_images/Copy_of_NEW_ARRIVALS.jpg",
+        "mobile_image": "shopify://shop_images/Copy_of_NEW_ARRIVALS.jpg",
+        "product_1": "130x140-cm-zebra-dune",
+        "product_1_title": "{{ section.settings.product_1.title }}",
+        "product_1_image": "shopify://shop_images/smooth-drape-twill-meetmilk-dodge-1-1.jpg",
+        "product_2": "100x150-cm-fine-linen-knit-rose",
+        "product_2_title": "{{ section.settings.product_1.title }}",
+        "product_2_image": "shopify://shop_images/smooth-drape-twill-meetmilk-pinot-1.jpg",
+        "product_3": "50x180-cm-organic-basic-brushed-sweat-pumpkin",
+        "product_3_title": "{{ section.settings.product_1.title }}",
+        "product_3_image": "shopify://shop_images/smooth-drape-twill-meetmilk-juniper-1_7fb89746-02c4-47d5-9542-f3a899a9e7b8.jpg",
+        "product_4": "100x160-tabby-canvas-warm-sand",
+        "product_4_title": "{{ section.settings.product_1.title }}",
+        "product_4_image": "shopify://shop_images/smooth-drape-twill-toffee-3.jpg",
+        "coupon_code": "PROMO2026",
+        "coupon_discount_amount": 10,
+        "coupon_discount_type": "percentage",
+        "padding_top": 2,
+        "padding_bottom": 2,
+        "background_color": "#FFFFFF",
+        "text_color": "#222222",
+        "accent_color": "#4A6CF7",
+        "coupon_border_color": "#1f5f3b",
+        "coupon_background_color": "#f4fbf3",
+        "coupon_text_color": "#163c28"
+      }
     }
   },
   "order": [
     "image_banner",
     "featured_collection",
-    "built_in_set_dNwiMz"
+    "built_in_set_dNwiMz",
+    "avpc_product_quiz_KpMpca"
   ]
 }
