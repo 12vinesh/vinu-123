@@ -87,7 +87,7 @@
         "question_iHtyEd": {
           "type": "question",
           "settings": {
-            "question": "",
+            "question": "What category you want to see?",
             "answer_1": "",
             "products_1": "",
             "answer_2": "",
